@@ -1,0 +1,13 @@
+__pycache__/
+.pytest_cache/
+build/
+dist/
+build_tcl/
+*.spec
+data/raw/
+data/mnist19.npz
+outputs/dashboard.html
+outputs/_c.js
+outputs/selftest.txt
+outputs/experiments_log.txt
+outputs/experiments_err.txt
