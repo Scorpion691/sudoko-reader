@@ -24,10 +24,19 @@ td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px;
 .i-board line{stroke:rgba(150,190,255,.6);stroke-linecap:round}
 .i-cells{position:absolute;inset:0;display:grid;grid-template:repeat(9,1fr)/repeat(9,1fr)}
 .ic{position:relative}
-.dg{position:absolute;inset:13%;background:#fff;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center}
-.dg.t{display:grid;place-items:center;background:none;color:#fff;font:700 13px 'Plus Jakarta Sans','Segoe UI',sans-serif}
+.dg{position:absolute;inset:13%;background-color:transparent;background-size:contain;background-repeat:no-repeat;background-position:center}
+.dg.t{display:grid;place-items:center;color:#fff;font:700 13px 'Plus Jakarta Sans','Segoe UI',sans-serif}
 .dg.wrong{opacity:0}
-.dg.right{background:#01b574}.dg.t.right{background:none;color:#01b574}
+.dg.t.right{color:#01b574}
 .was{position:absolute;top:4%;right:7%;font-size:8px;font-weight:800;font-style:normal;color:#f0605d;text-decoration:line-through}
-.dg.mis{background:#f0605d}.dg.t.mis{background:none;color:#f0605d}
+.dg.t.mis{color:#f0605d}
 .dg.wrong.show{opacity:1}
+
+/* ---- light mode used to print the PDFs: no filters, shadows, blurs, masks or alpha gradients (they make PDF viewers stutter) ---- */
+html.pdf *{filter:none!important;text-shadow:none!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html.pdf .page,html.pdf .slide{background:linear-gradient(160deg,#0b1340,#0a1130 55%,#070d2c)!important}
+html.pdf .glass{background:#0d1646!important}
+html.pdf .note{background:#0c1a45!important}html.pdf .note.w{background:#2a2312!important}
+html.pdf .eq,html.pdf pre{background:#060b25!important}
+html.pdf .tag{background:#0a2a66!important}
+html.pdf .chip{background:transparent!important}

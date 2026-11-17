@@ -25,7 +25,8 @@ BROWSERS = [r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
 def load():
     nn = json.load(open(os.path.join(dash.OUT, "nn_results.json"), encoding="utf-8"))
     return {"exp1": dash._table("exp1_search"), "exp2": dash._table("exp2_csp"), "exp3": dash._table("exp3_nn_vs_baselines"),
-            "nn": nn, "student": dash.STUDENT, "digits": dash._digits(), "cases": dash._cases()}
+            "nn": nn, "student": dash.STUDENT, "digits": dash._digits(), "digitsG": dash._digits((1, 181, 116)), "digitsR": dash._digits((240, 96, 93)),
+            "cases": dash._cases()}
 
 
 def numbers(D):
@@ -116,5 +117,5 @@ if __name__ == "__main__":
         if not os.path.exists(os.path.join(HERE, tpl)):
             continue
         h = render(tpl, name + ".html", D, N)
-        ok = to_pdf(h, os.path.join(HERE, name + ".pdf"), "?print" if name == "Slides" else "")
+        ok = to_pdf(h, os.path.join(HERE, name + ".pdf"), "?print&pdf" if name == "Slides" else "?pdf")
         print(name, "html ok;", "pdf pages:" if ok else "pdf skipped", pages(os.path.join(HERE, name + ".pdf")) if ok else "")

@@ -1,4 +1,5 @@
 /* ---- shared static drawing code for the report and the slides (no animation) ---- */
+const PDF=location.search.includes('pdf');if(PDF)document.documentElement.classList.add('pdf');
 const SVGNS='http://www.w3.org/2000/svg';
 const COL=['#3d8bff','#21d4fd','#a78bfa'];
 const NM={UCS:'UCS',GREEDY:'Greedy',ASTAR:'A*'};
@@ -11,7 +12,7 @@ function el(t,a,p){const e=document.createElementNS(SVGNS,t);for(const k in a)e.
 function div(c,p){const d=document.createElement('div');d.className=c;if(p)p.appendChild(d);return d}
 
 /* digits: one real MNIST image per digit, used as a CSS mask */
-if(D.digits){let css='';for(const n in D.digits)css+=`.dg${n}{-webkit-mask-image:url(${D.digits[n]});mask-image:url(${D.digits[n]})}`;
+if(D.digits){let css='';for(const n in D.digits)css+=`.dg${n}{background-image:url(${D.digits[n]})}.dg${n}.right{background-image:url(${D.digitsG[n]})}.dg${n}.mis{background-image:url(${D.digitsR[n]})}`;
  const st=document.createElement('style');st.textContent=css;document.head.appendChild(st)}
 
 /* a board in its final (corrected) state; mode 'read' shows the wrong digits in red instead */
@@ -55,7 +56,7 @@ function lineChart(host,series,o){
  series.forEach((s,si)=>{const gid=f.id+'g'+si,g=el('linearGradient',{id:gid,x1:0,y1:0,x2:0,y2:1},f.defs);
   el('stop',{offset:0,'stop-color':s.c,'stop-opacity':.34},g);el('stop',{offset:1,'stop-color':s.c,'stop-opacity':0},g);
   const P=s.p.map(p=>[x(p.x),y.fn(p.y)]),d=mono(P);
-  if(!s.dash)el('path',{d:d+`L${P[P.length-1][0]} ${f.ih}L${P[0][0]} ${f.ih}Z`,fill:`url(#${gid})`},f.g);
+  if(!s.dash)el('path',{d:d+`L${P[P.length-1][0]} ${f.ih}L${P[0][0]} ${f.ih}Z`,fill:PDF?s.c:`url(#${gid})`,'fill-opacity':PDF?.14:1},f.g);
   el('path',{d,fill:'none',stroke:s.c,'stroke-width':s.dash?1.8:2.6,'stroke-linecap':'round','stroke-dasharray':s.dash?'6 5':''},f.g);
   s.p.forEach(p=>{el('line',{x1:x(p.x),x2:x(p.x),y1:y.fn(Math.max(y.lo,p.y-p.sd)),y2:y.fn(Math.min(y.hi,p.y+p.sd)),stroke:s.c,'stroke-opacity':.45,'stroke-width':1.4},f.g);
    el('circle',{cx:x(p.x),cy:y.fn(p.y),r:4,fill:'#0a1240',stroke:s.c,'stroke-width':2.2},f.g)})})}
@@ -66,7 +67,7 @@ function barChart(host,groups,names,o){
  names.forEach((n,i)=>{const g=el('linearGradient',{id:f.id+'b'+i,x1:0,y1:0,x2:0,y2:1},f.defs);
   el('stop',{offset:0,'stop-color':COL[i]},g);el('stop',{offset:1,'stop-color':COL[i],'stop-opacity':.2},g)});
  groups.forEach((g,gi)=>g.b.forEach((b,i)=>{const bx=gw*gi+gw*.11+i*bw,top=y.fn(Math.min(b.y,y.hi));
-  el('rect',{x:bx+1.5,y:top,width:Math.max(4,bw-3),height:Math.max(2,f.ih-top),rx:Math.min(6,(bw-3)/2),fill:`url(#${f.id}b${i})`},f.g);
+  el('rect',{x:bx+1.5,y:top,width:Math.max(4,bw-3),height:Math.max(2,f.ih-top),rx:Math.min(6,(bw-3)/2),fill:PDF?COL[i]:`url(#${f.id}b${i})`,'fill-opacity':PDF?.85:1},f.g);
   const cx=bx+bw/2;el('line',{x1:cx,x2:cx,y1:y.fn(Math.max(y.lo,b.y-b.sd)),y2:y.fn(Math.min(y.hi,b.y+b.sd)),stroke:'#fff','stroke-opacity':.55,'stroke-width':1.1},f.g);
   if(o.lab&&b.y>0&&(i===0||b.y<.99)){const t=el('text',{x:cx,y:y.fn(Math.min(y.hi,b.y+b.sd))-4,class:'vl'},f.g);t.textContent=o.f(b.y)}}))}
 

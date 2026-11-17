@@ -33,7 +33,7 @@ def _table(name):
     return [{h: _ms(c) for h, c in zip(head, row)} for row in rows]
 
 
-def _digits():
+def _digits(color=(255, 255, 255)):
     """One real handwritten MNIST test image per digit 1-9 (white ink, transparent background) for the intro."""
     p = os.path.join(ROOT, "data", "mnist19.npz")
     if not os.path.exists(p):
@@ -52,7 +52,7 @@ def _digits():
             means = X[cand].mean((1, 2))
             a = X[cand[int(np.argmin(np.abs(means - np.median(means))))]]
             rgba = np.zeros((28, 28, 4), np.uint8)
-            rgba[..., :3] = 255
+            rgba[..., :3] = color
             rgba[..., 3] = a
             buf = io.BytesIO()
             Image.fromarray(rgba, "RGBA").resize((84, 84), Image.LANCZOS).save(buf, "PNG")
