@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sudoku Reader Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#060b28;--fg:#fff;--muted:#a0aec0;--line:rgba(255,255,255,.08);
+  --blue:#0075ff;--blue2:#3d8bff;--cyan:#21d4fd;--violet:#a78bfa;--green:#01b574;--red:#f0605d;--amber:#ffb547;
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;min-height:100vh;color:var(--fg);font:14px/1.5 'Plus Jakarta Sans','Segoe UI',system-ui,sans-serif;
+  background:radial-gradient(900px 520px at 88% -8%,rgba(40,80,230,.38),transparent 62%),radial-gradient(700px 520px at -5% 105%,rgba(10,75,216,.35),transparent 60%),linear-gradient(160deg,#060b28,#0a1130 60%,#05091f);
+  background-attachment:fixed;overflow-x:hidden}
+.orb{position:fixed;width:340px;height:340px;border-radius:50%;right:7%;top:-150px;pointer-events:none;
+  background:radial-gradient(circle at 35% 30%,rgba(140,170,255,.5),rgba(42,63,183,.18) 55%,transparent 70%);animation:float 9s ease-in-out infinite alternate}
+@keyframes float{to{transform:translate(-30px,40px) scale(1.06)}}
+.app{display:grid;grid-template-columns:250px minmax(0,1fr);gap:24px;padding:20px;max-width:1520px;margin:0 auto;position:relative}
+
+/* ---------- sidebar ---------- */
+.side{position:sticky;top:20px;height:calc(100vh - 40px);border-radius:20px;padding:22px 16px;display:flex;flex-direction:column;gap:6px;
+  background:linear-gradient(127deg,rgba(15,24,70,.9) 19%,rgba(8,12,38,.7) 76%);border:1px solid var(--line);backdrop-filter:blur(20px)}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px 14px;font-weight:800;letter-spacing:.14em;font-size:12px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.logo{width:28px;height:28px;border-radius:9px;background:linear-gradient(135deg,var(--blue),var(--cyan));display:grid;place-items:center;box-shadow:0 0 18px rgba(0,117,255,.6)}
+.nav{display:flex;flex-direction:column;gap:4px}
+.nav a{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:15px;color:var(--muted);text-decoration:none;font-weight:600;
+  transition:background .3s var(--ease),color .3s,transform .3s var(--ease)}
+.nav a:hover{color:#fff;transform:translateX(4px)}
+.nav .ic{width:30px;height:30px;border-radius:10px;background:#0b1240;display:grid;place-items:center;color:var(--blue2);transition:background .3s,color .3s,box-shadow .3s}
+.nav a.active{background:rgba(20,32,92,.85);color:#fff;box-shadow:0 7px 22px rgba(0,0,0,.25)}
+.nav a.active .ic{background:var(--blue);color:#fff;box-shadow:0 0 14px rgba(0,117,255,.7)}
+.sec-label{font-size:11px;font-weight:700;letter-spacing:.12em;color:#fff;margin:16px 10px 4px}
+.who{margin:2px 6px;padding:12px;border-radius:15px;background:rgba(11,18,64,.8);border:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.who b{display:block;font-size:13px;line-height:1.25}.who span{color:var(--muted);font-size:12px}
+.avatar{flex:none;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;font-weight:800;background:linear-gradient(135deg,var(--blue),var(--violet))}
+.helpcard{margin-top:auto;border-radius:18px;padding:16px;min-height:132px;position:relative;overflow:hidden;
+  background:radial-gradient(circle at 80% 0%,rgba(167,139,250,.55),transparent 55%),linear-gradient(160deg,#1b3fd6,#0a1a6b)}
+.helpcard .q{width:30px;height:30px;border-radius:10px;background:#fff;color:var(--blue);display:grid;place-items:center;font-weight:800;margin-bottom:10px}
+.helpcard b{display:block;font-size:13px}.helpcard span{font-size:11px;opacity:.8}
+.helpcard a{display:block;margin-top:10px;text-align:center;padding:8px;border-radius:12px;background:rgba(6,11,40,.7);color:#fff;text-decoration:none;font-size:11px;font-weight:700;letter-spacing:.06em;transition:background .3s}
+.helpcard a:hover{background:rgba(6,11,40,.95)}
+
+/* ---------- layout ---------- */
+.main{display:flex;flex-direction:column;gap:22px;min-width:0}
+.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.crumb{color:var(--muted);font-size:12px}.crumb b{color:#fff}
+.top h1{margin:2px 0 0;font-size:15px;font-weight:700}
+.tools{display:flex;gap:10px;align-items:center}
+.pill{display:flex;align-items:center;gap:10px;padding:6px 14px 6px 6px;border-radius:15px;background:rgba(11,18,64,.8);border:1px solid var(--line)}
+.pill .avatar{width:30px;height:30px;border-radius:10px;font-size:12px}
+.pill div{line-height:1.2}.pill b{font-size:12px}.pill span{display:block;font-size:11px;color:var(--muted)}
+.btn{border:1px solid var(--line);background:rgba(11,18,64,.8);color:#fff;border-radius:12px;padding:8px 14px;font:600 12px 'Plus Jakarta Sans','Segoe UI',sans-serif;cursor:pointer;transition:transform .3s var(--ease),background .3s,box-shadow .3s}
+.btn:hover{background:var(--blue);box-shadow:0 8px 22px rgba(0,117,255,.4);transform:translateY(-2px)}
+.btn:active{transform:translateY(0) scale(.97)}
+.row{display:grid;gap:22px}
+.r-kpi{grid-template-columns:repeat(4,minmax(0,1fr))}
+.r-hero{grid-template-columns:1.9fr 1fr 1fr}
+.r-wide{grid-template-columns:1.6fr 1fr}
+.r-half{grid-template-columns:1fr 1fr}
+@media (max-width:1280px){.r-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}.r-hero{grid-template-columns:1fr 1fr}.r-hero>:first-child{grid-column:1/-1}.r-wide,.r-half{grid-template-columns:1fr}}
+@media (max-width:900px){.app{grid-template-columns:1fr}.side{position:static;height:auto}.helpcard{display:none}.nav{flex-direction:row;flex-wrap:wrap}.r-hero{grid-template-columns:1fr}}
+@media (max-width:560px){.r-kpi{grid-template-columns:1fr}}
+
+.card{position:relative;border-radius:20px;padding:20px;min-width:0;
+  background:linear-gradient(127deg,rgba(15,24,70,.85) 19%,rgba(8,12,38,.62) 76%);border:1px solid var(--line);backdrop-filter:blur(20px);
+  transition:transform .4s var(--ease),box-shadow .4s,border-color .4s}
+.card:hover{transform:translateY(-4px);border-color:rgba(0,117,255,.45);box-shadow:0 18px 44px rgba(0,117,255,.16)}
+.ready .card{animation:rise .8s var(--ease) backwards;animation-delay:calc(var(--i,0)*70ms)}
+@keyframes rise{from{opacity:0;transform:translateY(22px) scale(.98)}}
+.card h2{margin:0;font-size:16px;font-weight:700}
+.card .sub{color:var(--muted);font-size:12px;margin:2px 0 0}
+.card .sub b{color:var(--green);font-weight:700}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}.legend i{width:9px;height:9px;border-radius:3px;display:inline-block;box-shadow:0 0 8px currentColor}
+
+/* kpi */
+.kpi{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px 18px}
+.kpi .l{color:var(--muted);font-size:12px;font-weight:600}
+.kpi .v{font-size:20px;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums;margin-top:2px}
+.chip{font-size:12px;font-weight:700;margin-left:6px}.chip.up{color:var(--green)}.chip.dn{color:var(--red)}
+.kicon{flex:none;width:44px;height:44px;border-radius:13px;background:var(--blue);display:grid;place-items:center;box-shadow:0 6px 20px rgba(0,117,255,.5);transition:transform .5s var(--ease)}
+.card:hover .kicon{transform:rotate(-8deg) scale(1.1)}
+
+/* hero */
+.hero{min-height:300px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;overflow:hidden;
+  background:radial-gradient(500px 300px at 90% 40%,rgba(0,117,255,.35),transparent 65%),linear-gradient(127deg,rgba(15,24,70,.9),rgba(8,12,38,.7))}
+.hero .t{display:flex;flex-direction:column;gap:6px;height:100%;min-width:0}
+.hero small{color:var(--muted)}
+.hero .name{font-size:26px;font-weight:800;line-height:1.15;letter-spacing:-.01em}
+.hero .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.tag{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;background:rgba(0,117,255,.18);border:1px solid rgba(0,117,255,.4);color:#cfe1ff}
+.hero .proj{margin-top:6px;font-size:13px;color:#dbe7ff}.hero .proj b{color:#fff}
+.hero a{margin-top:auto;color:#fff;text-decoration:none;font-size:12px;font-weight:700;display:inline-flex;gap:6px;align-items:center;transition:gap .3s var(--ease)}
+.hero a:hover{gap:12px}
+.sg{width:min(230px,100%);aspect-ratio:1;filter:drop-shadow(0 0 22px rgba(0,117,255,.45))}
+.sg text{font-weight:700;text-anchor:middle;dominant-baseline:central;font-size:17px;fill:#fff;opacity:0;animation:pop .6s var(--ease) forwards}
+.sg .bad{fill:var(--red)}.sg .new{fill:var(--green);font-size:11px;animation-name:pop2}
+.sg .hl{fill:rgba(1,181,116,.16);stroke:var(--green);stroke-width:1.4;animation:pulse 2.2s ease-in-out infinite}
+@keyframes pop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}}
+@keyframes pop2{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes pulse{50%{fill:rgba(1,181,116,.35)}}
+.sg text,.sg rect{transform-box:fill-box;transform-origin:center}
+.empty{color:var(--muted);font-size:12px}
+
+/* gauge */
+.gwrap{position:relative;width:170px;height:170px;margin:6px auto 0}
+.gwrap svg{width:100%;height:100%;transform:rotate(-90deg)}
+.gwrap .track{fill:none;stroke:rgba(255,255,255,.07);stroke-width:12}
+.gwrap .arc{fill:none;stroke-width:12;stroke-linecap:round;transition:stroke-dasharray 1.3s var(--ease);filter:drop-shadow(0 0 7px rgba(33,212,253,.55))}
+.gc{position:absolute;inset:0;display:grid;place-items:center;text-align:center;line-height:1.15}
+.gc b{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums}.gc span{font-size:11px;color:var(--muted)}
+.mini{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.mini div{background:rgba(8,13,44,.85);border-radius:14px;padding:10px 12px;border:1px solid var(--line)}
+.mini small{display:block;color:var(--muted);font-size:11px}.mini b{font-size:16px;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;background:rgba(8,13,44,.85);border:1px solid var(--line);border-radius:12px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;color:var(--muted);font:700 12px 'Plus Jakarta Sans','Segoe UI',sans-serif;padding:5px 11px;border-radius:9px;cursor:pointer;transition:background .3s,color .3s,box-shadow .3s}
+.seg button:hover{color:#fff}.seg button.on{background:var(--blue);color:#fff;box-shadow:0 4px 14px rgba(0,117,255,.5)}
+
+/* charts */
+.chart{position:relative;min-height:290px}.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.axt{fill:var(--muted);font-size:11px}.grd{stroke:rgba(255,255,255,.07);stroke-dasharray:3 4}
+.pt{transform-box:fill-box;transform-origin:center;transition:transform .25s var(--ease)}.pt:hover{transform:scale(1.5)}
+.bar{transform-box:fill-box;transform-origin:bottom;transition:filter .25s}.bar:hover{filter:brightness(1.35)}
+.vl{fill:#fff;font-size:10px;font-weight:700;text-anchor:middle}
+.tip{position:absolute;pointer-events:none;white-space:nowrap;background:rgba(6,11,40,.96);border:1px solid rgba(0,117,255,.5);box-shadow:0 8px 24px rgba(0,0,0,.5);
+  font-size:12px;padding:5px 10px;border-radius:10px;z-index:4;transition:opacity .15s}
+
+/* tables / progress */
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th{color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.05);font-weight:600;font-size:13px}
+tr{transition:background .25s}tbody tr:hover{background:rgba(0,117,255,.1)}
+.num{text-align:right}th.num{text-align:right}
+.pb{display:flex;align-items:center;gap:8px;min-width:120px}.pb em{font-style:normal;font-size:12px;width:36px;text-align:right}
+.pb span{flex:1;height:4px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden}
+.pb i{display:block;height:100%;width:0;border-radius:4px;background:linear-gradient(90deg,var(--blue),var(--cyan));transition:width 1.2s var(--ease)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px}
+
+/* timeline */
+.tl{list-style:none;margin:6px 0 0;padding:0 0 0 4px;display:flex;flex-direction:column;gap:18px;position:relative}
+.tl::before{content:"";position:absolute;left:11px;top:6px;bottom:6px;width:2px;background:linear-gradient(var(--blue),transparent)}
+.tl li{display:flex;gap:14px;align-items:flex-start;position:relative;animation:slide .6s var(--ease) backwards;animation-delay:calc(var(--k,0)*120ms + 500ms)}
+@keyframes slide{from{opacity:0;transform:translateX(-14px)}}
+.tl .d{flex:none;width:16px;height:16px;border-radius:50%;margin-top:2px;background:var(--c,var(--blue));box-shadow:0 0 0 4px rgba(0,117,255,.15),0 0 14px var(--c,var(--blue))}
+.tl b{display:block;font-size:13px}.tl span{color:var(--muted);font-size:12px}
+
+.foot{color:var(--muted);font-size:12px;text-align:center;padding:6px 0 18px}.foot b{color:#fff}
+/* ---------- app reveal (intro hand-off) ---------- */
+.app{transition:opacity .9s ease .12s,transform 1.1s var(--ease) .1s}
+html.lock .app{opacity:0;transform:translateY(14px) scale(.992)}
+html.lock{overflow:hidden}
+
+/* ---------- board: one component for the intro, the hero card and the cases ---------- */
+.i-board{position:relative;aspect-ratio:1}
+.i-board.intro{width:min(44vh,400px,84vw);animation:boardIn 1.1s var(--ease) both}
+@keyframes boardIn{from{opacity:0;transform:scale(.86) rotateX(24deg)}}
+#heroGrid{width:230px;max-width:100%}
+@media (max-width:560px){#heroGrid{width:170px}}
+.i-board.static{width:100%;transition:opacity .35s;animation:soft .9s var(--ease) backwards}
+.still .i-board line{stroke-dashoffset:0}
+@keyframes soft{from{opacity:0;transform:scale(.95)}}
+.i-board.case{width:min(330px,78vw)}
+.i-board.fly{position:fixed;z-index:102;margin:0;will-change:transform}
+.i-board svg{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 0 22px rgba(0,117,255,.6));overflow:visible}
+.i-board line{stroke:rgba(150,190,255,.6);stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;animation:draw .8s var(--ease) forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.i-cells{position:absolute;inset:0;display:grid;grid-template:repeat(9,1fr)/repeat(9,1fr)}
+.ic{position:relative}
+.dg{position:absolute;inset:13%;background:#fff;opacity:0;transform:scale(.3);
+  -webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;
+  transition:opacity .5s var(--ease),transform .5s var(--ease),background .35s,color .35s;filter:drop-shadow(0 0 5px rgba(120,170,255,.55))}
+.dg.t{display:grid;place-items:center;background:none;color:#fff;font:700 clamp(12px,3.2vh,24px) 'Plus Jakarta Sans','Segoe UI',sans-serif}
+.i-board.static .dg.t,.i-board.case .dg.t{font-size:15px}
+.dg.on{opacity:1;transform:none}
+.dg.wrong.bad{background:#f0605d;filter:drop-shadow(0 0 8px #f0605d)}.dg.t.wrong.bad{background:none;color:#f0605d}
+.dg.right{background:#01b574;transform:scale(1.8);filter:drop-shadow(0 0 9px #01b574)}.dg.t.right{background:none;color:#01b574}
+.dg.right.on{opacity:1;transform:none}
+.dg.shake{animation:shake .5s}
+@keyframes shake{20%{transform:translateX(-7%)}40%{transform:translateX(7%)}60%{transform:translateX(-5%)}80%{transform:translateX(4%)}}
+.dg.right.pulse{animation:glow 1.1s ease-in-out 2}
+@keyframes glow{50%{filter:drop-shadow(0 0 16px #01b574) brightness(1.4)}}
+.was{position:absolute;top:5%;right:8%;font-size:9px;font-weight:800;font-style:normal;color:#f0605d;text-decoration:line-through;opacity:0;transition:opacity .6s}
+.i-ring{position:absolute;left:0;top:0;width:11.111%;height:11.111%;border:2px solid var(--cyan);border-radius:12px;opacity:0;pointer-events:none;
+  box-shadow:0 0 20px var(--cyan),inset 0 0 12px rgba(33,212,253,.45);transition:transform .55s var(--ease),opacity .3s}
+/* settled = final corrected state (used by the hero card and when the intro is skipped) */
+.i-board.fin line{animation:none;stroke-dashoffset:0}
+.i-board.fin .dg.w:not(.wrong){opacity:1;transform:none;transition:none}
+.i-board.fin .dg.wrong{opacity:0;transition:none}
+.i-board.fin .dg.right{opacity:1;transform:none;transition:none;animation:none}
+.i-board.fin .i-ring{opacity:0}
+.i-board.fin .was{opacity:.95;transition:none}
+
+/* ---------- intro ---------- */
+#intro{position:fixed;inset:0;z-index:100;display:grid;place-items:center;animation:ovin .6s ease backwards;
+  background:radial-gradient(900px 620px at 50% 38%,rgba(30,70,220,.5),transparent 66%),radial-gradient(600px 400px at 90% 100%,rgba(167,139,250,.22),transparent 70%),linear-gradient(160deg,#03061a,#0a1130 60%,#03061a);
+  transition:opacity .85s ease}
+@keyframes ovin{from{opacity:0}}
+#intro.out{opacity:0;pointer-events:none}
+.i-stack{display:flex;flex-direction:column;align-items:center;gap:20px;padding:20px;perspective:900px}
+.i-foot{position:relative;width:min(92vw,680px);height:132px;text-align:center;transition:opacity .5s,transform .9s var(--ease)}
+#intro.out .i-foot{opacity:0;transform:translateY(16px)}
+#intro.out .i-skip,#intro.out .i-prog{opacity:0}
+.i-skip,.i-prog{transition:opacity .3s}
+.i-cap{position:absolute;inset:0 0 auto 0;font:700 12px 'Plus Jakarta Sans','Segoe UI',sans-serif;letter-spacing:.28em;text-transform:uppercase;color:#9fb6ff;opacity:0;transition:opacity .35s,color .35s}
+.i-cap.show{opacity:1}.i-cap.bad{color:#f0605d}.i-cap.ok{color:#01b574}
+.i-title{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;gap:8px}
+.i-title.show{display:flex}
+.i-h{font-size:clamp(22px,4.4vw,38px);font-weight:800;letter-spacing:.3em;margin-right:-.3em;text-shadow:0 0 26px rgba(61,139,255,.8)}
+.i-p{font-size:clamp(12px,1.6vw,15px);font-weight:600;color:#cfe1ff;letter-spacing:.04em}
+.i-me{display:flex;align-items:center;gap:10px;margin-top:6px;font-weight:700;font-size:15px}
+.i-me .tag{animation:lt .7s var(--ease) both;animation-delay:var(--d)}
+.lt{display:inline-block;opacity:0;animation:lt .6s var(--ease) forwards}
+@keyframes lt{from{opacity:0;transform:translateY(14px);filter:blur(8px)}to{opacity:1;transform:none;filter:none}}
+.i-prog{position:absolute;left:0;bottom:0;height:3px;width:0;background:linear-gradient(90deg,var(--blue),var(--cyan));box-shadow:0 0 14px var(--cyan);animation:prog var(--T,6s) linear forwards}
+@keyframes prog{to{width:100%}}
+.i-skip{position:absolute;right:24px;bottom:24px}
+#intro.dbg *{animation:none!important;transition:none!important}
+#intro.dbg .i-board line{stroke-dashoffset:0}#intro.dbg .lt{opacity:1;transform:none;filter:none}#intro.dbg .i-board{opacity:1;transform:none}
+
+/* ---------- corrected cases ---------- */
+.cases-body{display:grid;grid-template-columns:minmax(210px,290px) minmax(0,1fr);gap:24px;align-items:start}
+.case-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.case-item{display:flex;align-items:center;gap:12px;width:100%;padding:11px 13px;border-radius:14px;border:1px solid var(--line);background:rgba(8,13,44,.65);cursor:pointer;color:var(--muted);
+  text-align:left;font:600 13px 'Plus Jakarta Sans','Segoe UI',sans-serif;position:relative;overflow:hidden;
+  transition:transform .35s var(--ease),border-color .35s,background .35s,color .35s,box-shadow .35s}
+.case-item:hover{transform:translateX(4px);color:#fff}
+.case-item.active{background:rgba(20,36,100,.85);border-color:rgba(0,117,255,.6);color:#fff;box-shadow:0 8px 26px rgba(0,117,255,.22)}
+.case-item .n{flex:none;width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:#0b1240;font-weight:800;font-size:12px;transition:background .35s,box-shadow .35s}
+.case-item.active .n{background:var(--blue);box-shadow:0 0 14px rgba(0,117,255,.7)}
+.case-item .m{flex:1;line-height:1.25}.case-item .m small{display:block;color:var(--muted);font-size:11px;font-weight:500}
+.case-item .st{font-size:11px;font-weight:700}
+.ok{color:var(--green)}.warn{color:var(--amber)}.badc{color:var(--red)}
+.case-item::after{content:"";position:absolute;left:0;bottom:0;height:2px;width:0;background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.case-item.active.run::after{animation:cyc var(--cyc,7s) linear forwards}
+@keyframes cyc{to{width:100%}}
+.case-stage{display:grid;grid-template-columns:auto minmax(0,1fr);gap:28px;align-items:center;transition:opacity .3s,transform .4s var(--ease);min-height:340px}
+.case-stage.swap{opacity:0;transform:translateY(10px)}
+.case-info{display:flex;flex-direction:column;gap:14px;min-width:0}
+.case-info h3{margin:0;font-size:16px;font-weight:700;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.res{font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;border:1px solid currentColor;opacity:0;transform:translateY(4px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
+.res.show{opacity:1;transform:none}
+.cstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:10px}
+.cstats div{background:rgba(8,13,44,.85);border:1px solid var(--line);border-radius:14px;padding:9px 12px}
+.cstats small{display:block;color:var(--muted);font-size:11px}.cstats b{font-size:17px;font-variant-numeric:tabular-nums}
+.clog{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;min-height:64px}
+.clog li{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;font-weight:600;animation:slide .55s var(--ease) backwards}
+.clog li i{font-style:normal;color:var(--red);text-decoration:line-through}.clog li em{font-style:normal;color:var(--green)}.clog li span{color:var(--muted);font-weight:500;font-size:12px}
+@media (max-width:1100px){.cases-body{grid-template-columns:1fr}.case-list{flex-direction:row;overflow-x:auto;padding-bottom:4px}.case-item{min-width:190px}.case-stage{grid-template-columns:1fr;justify-items:center}}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.sg text{opacity:1}}
+.still *{animation:none!important;transition:none!important}.still .sg text{opacity:1}
+</style></head>
+<body>
+<div class="orb"></div>
+<div class="app" id="app">
+ <aside class="side">
+  <div class="brand"><div class="logo"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6"><path d="M1 1h14v14H1zM5.7 1v14M10.3 1v14M1 5.7h14M1 10.3h14"/></svg></div>SUDOKU READER</div>
+  <nav class="nav" id="nav">
+   <a href="#sec-overview" class="active" data-ic="home">Dashboard</a>
+   <a href="#sec-cases" data-ic="cases">Cases</a>
+   <a href="#sec-search" data-ic="search">Search</a>
+   <a href="#sec-csp" data-ic="grid">CSP</a>
+   <a href="#sec-nn" data-ic="brain">Neural network</a>
+   <a href="#sec-run" data-ic="play">This run</a>
+  </nav>
+  <div class="sec-label">STUDENT</div>
+  <div class="who"><div class="avatar" id="av1">AE</div><div><b>__NAME__</b><span>ID __ID__</span></div></div>
+  <div class="helpcard"><div class="q">P7</div><b>__PROJECT__</b><span>Search + CSP + Neural Network</span><a href="#sec-run">VIEW THIS RUN</a></div>
+ </aside>
+
+ <main class="main">
+  <div class="top">
+   <div><div class="crumb">Pages / <b>Dashboard</b></div><h1>Dashboard</h1></div>
+   <div class="tools"><button class="btn" id="replayIntro" title="Play the intro again">&#9654; Intro</button><button class="btn" id="replay" title="Replay the animations">&#8635; Replay</button>
+    <div class="pill"><div class="avatar" id="av2">AE</div><div><b>__NAME__</b><span>ID __ID__</span></div></div></div>
+  </div>
+
+  <section class="row r-kpi" id="sec-overview" aria-label="Key figures"></section>
+
+  <section class="row r-hero">
+   <div class="card hero" style="--i:4">
+    <div class="t">
+     <small>Welcome back,</small>
+     <div class="name">__NAME__</div>
+     <div class="meta"><span class="tag">ID __ID__</span><span class="tag">Project __CODE__</span></div>
+     <div class="proj">Project: <b>__PROJECT__</b></div>
+     <small>A network reads the digits, search fixes the misreads, a CSP solves the puzzle.</small>
+     <a href="#sec-run">View this run <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    </div>
+    <div id="heroGrid"></div>
+   </div>
+   <div class="card" style="--i:5">
+    <div class="head"><div><h2>Exact recovery</h2><p class="sub">NN-guided search, by injected misreads</p></div>
+     <div class="seg" id="seg"><button data-k="1" class="on">1</button><button data-k="2">2</button><button data-k="3">3</button></div></div>
+    <div class="gwrap" id="g1"></div>
+    <div class="mini"><div><small>No correction</small><b id="g1a">–</b></div><div><small>Random correction</small><b id="g1b">–</b></div></div>
+   </div>
+   <div class="card" style="--i:6">
+    <div class="head"><div><h2>Digit classifier</h2><p class="sub">MLP 784-128-64-9, test set</p></div></div>
+    <div class="gwrap" id="g2"></div>
+    <div class="mini"><div><small>Logistic regression</small><b id="g2a">–</b></div><div><small>Calibration error</small><b id="g2b">–</b></div></div>
+   </div>
+  </section>
+
+  <section class="row" id="sec-cases">
+   <div class="card cases" style="--i:7">
+    <div class="head"><div><h2>Corrected cases</h2><p class="sub">Real puzzles: a misread digit breaks the puzzle, search finds the cheapest fix, the CSP solves it</p></div>
+     <div class="seg"><button id="caseAuto" class="on" title="Cycle through the cases">Auto</button><button id="caseReplay" title="Replay this case">&#9654; Replay</button></div></div>
+    <div class="cases-body"><ul class="case-list" id="caseList"></ul>
+     <div class="case-stage" id="caseStage"><div id="caseBoard"></div><div class="case-info" id="caseInfo"></div></div></div>
+   </div>
+  </section>
+
+  <section class="row r-wide" id="sec-search">
+   <div class="card" style="--i:7"><div class="head"><div><h2>Recovery of the exact puzzle</h2><p class="sub">Share of puzzles whose solution equals the true one</p></div><div class="legend" id="lg2"></div></div><div class="chart" id="c2"></div></div>
+   <div class="card" style="--i:8"><div class="head"><div><h2>Search effort</h2><p class="sub">Nodes expanded, log scale</p></div><div class="legend" id="lg1"></div></div><div class="chart" id="c1"></div></div>
+  </section>
+
+  <section class="row r-half" id="sec-csp">
+   <div class="card" style="--i:9"><div class="head"><div><h2>Forward checking and AC-3</h2><p class="sub">CSP assignments per puzzle, log scale</p></div><div class="legend" id="lg3"></div></div><div class="chart" id="c3"></div></div>
+   <div class="card" id="sec-nn" style="--i:10"><div class="head"><div><h2>NN-guided against baselines</h2><p class="sub">Exact recovery by injected misreads</p></div><div class="legend" id="lg4"></div></div><div class="chart" id="c4"></div></div>
+  </section>
+
+  <section class="row r-wide" id="sec-run">
+   <div class="card" style="--i:11"><div class="head"><div><h2>Search comparison</h2><p class="sub">UCS, Greedy and A*, mean over 5 seeds</p></div></div>
+    <div class="wrap"><table><thead><tr><th>Algorithm</th><th class="num">Misreads</th><th class="num">Expanded</th><th class="num">CSP calls</th><th>Recovery</th></tr></thead><tbody id="tb1"></tbody></table></div></div>
+   <div class="card" style="--i:12"><div class="head"><div><h2>Pipeline of this run</h2><p class="sub" id="runsub"></p></div></div><ul class="tl" id="tl"></ul></div>
+  </section>
+
+  <div class="foot"><b>__NAME__</b> &middot; ID __ID__ &middot; __CODE__ &ndash; __PROJECT__</div>
+ </main>
+</div>
+
+<script>
+const D=/*DATA*/null;
+const STILL=location.search.includes('still');if(STILL)document.documentElement.classList.add('still');
+const NS='http://www.w3.org/2000/svg',REDUCED=STILL||matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $=id=>document.getElementById(id);
+const M=x=>Array.isArray(x)?x[0]:x,S=x=>Array.isArray(x)?x[1]:0;
+const f1=x=>x.toFixed(1),f2=x=>x.toFixed(2),f3=x=>x.toFixed(3),f4=x=>x.toFixed(4),fi=x=>Math.round(x).toLocaleString('en-US');
+const NM={UCS:'UCS',GREEDY:'Greedy',ASTAR:'A*'},COL=['#3d8bff','#21d4fd','#a78bfa'];
+const find=(t,o)=>t&&t.find(r=>Object.keys(o).every(k=>String(r[k])===String(o[k])));
+const REC='exact recovery rate';
+let ANIM=true;
+function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+function div(c,p){const d=document.createElement('div');d.className=c;if(p)p.appendChild(d);return d}
+const raf=f=>requestAnimationFrame(()=>requestAnimationFrame(f));
+
+/* ---------- icons ---------- */
+const IC={
+ home:'<path d="M3 11l9-8 9 8v10h-6v-6H9v6H3z"/>',
+ search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+ grid:'<path d="M3 3h18v18H3zM9 3v18M15 3v18M3 9h18M3 15h18"/>',
+ brain:'<circle cx="5" cy="6" r="1.8"/><circle cx="5" cy="12" r="1.8"/><circle cx="5" cy="18" r="1.8"/><circle cx="19" cy="12" r="1.8"/><circle cx="12" cy="9" r="1.8"/><circle cx="12" cy="15" r="1.8"/><path d="M6.7 6.5l3.8 2M6.7 12l3.8-2.2M6.7 17.5l3.8-2M13.7 9.5l3.6 2M13.7 14.5l3.6-2"/>',
+ cases:'<rect x="3" y="3" width="14" height="14" rx="3"/><path d="M7 21h12a2 2 0 002-2V7"/>',
+ play:'<path d="M7 4l13 8-13 8z"/>',
+ acc:'<circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/>',
+ ece:'<path d="M4 18c3-9 6-9 8-4s5 3 8-6"/>',
+ rec:'<path d="M5 20V10M12 20V4M19 20v-7"/>',
+ csp:'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>'};
+const ico=(k,s=18)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IC[k]}</svg>`;
+document.querySelectorAll('#nav a').forEach(a=>{const i=document.createElement('span');i.className='ic';i.innerHTML=ico(a.dataset.ic,16);a.prepend(i)});
+const ini=n=>n.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+$('av1').textContent=$('av2').textContent=ini(D.student.name);
+
+/* ---------- count-up (eases from the current value, so switching never restarts from zero) ---------- */
+function countUp(node,to,fmt,dur,from){
+ if(node._raf)cancelAnimationFrame(node._raf);
+ if(REDUCED||!ANIM||dur===0){node.textContent=fmt(to);node._v=to;return}
+ const f0=from==null?0:from,t0=performance.now();dur=dur||1200;
+ (function step(t){const k=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-k,3),v=f0+(to-f0)*e;
+  node.textContent=fmt(v);node._v=v;if(k<1)node._raf=requestAnimationFrame(step);else node._v=to})(t0);
+}
+
+/* ---------- KPI cards ---------- */
+function kpis(){
+ const nn=D.nn,e2=D.exp2,e3=D.exp3,box=$('sec-overview');box.innerHTML='';
+ const items=[];
+ if(nn){const a=nn.mlp.test_acc_after,l=nn.logreg.test_acc,e=nn.mlp.ece_after_temperature_scaling,e0=nn.mlp.ece_before;
+  items.push({l:'Classifier accuracy',v:a*100,fmt:x=>f1(x)+'%',d:'+'+f1((a-l)*100)+' pts',up:1,ic:'acc'},
+             {l:'Calibration error (ECE)',v:e,fmt:f4,d:f1((e-e0)/e0*100)+'%',up:1,ic:'ece'})}
+ if(e3){const r=M(find(e3,{misreads:3,method:'NN-guided (UCS)'})[REC]),z=M(find(e3,{misreads:3,method:'no correction'})[REC]);
+  items.push({l:'Exact recovery, 3 misreads',v:r,fmt:f2,d:'+'+f2(r-z)+' vs none',up:1,ic:'rec'})}
+ if(e2){const a=M(find(e2,{givens:30,method:'BT+FC+AC-3'}).assignments),b=M(find(e2,{givens:30,method:'BT'}).assignments);
+  items.push({l:'CSP assignments, 30 givens',v:a,fmt:fi,d:f1((a-b)/b*100)+'% vs BT',up:1,ic:'csp'})}
+ items.forEach((k,i)=>{const c=div('card kpi',box);c.style.setProperty('--i',i);
+  c.innerHTML=`<div><div class="l">${k.l}</div><div class="v"><span class="cv">0</span><span class="chip ${k.up?'up':'dn'}">${k.d}</span></div></div><div class="kicon">${ico(k.ic,20)}</div>`;
+  countUp(c.querySelector('.cv'),k.v,k.fmt)});
+}
+
+/* ---------- board: one component used by the intro, the hero card and the cases ---------- */
+if(D.digits){let css='';for(const n in D.digits)css+=`.dg${n}{-webkit-mask-image:url(${D.digits[n]});mask-image:url(${D.digits[n]})}`;
+ const st=document.createElement('style');st.textContent=css;document.head.appendChild(st)}
+function boardEl(read,final,mode){
+ const fixes=[];for(let k=0;k<81;k++)if(read[k]&&final[k]!==read[k])fixes.push(k);
+ const bad=new Set(fixes),text=!D.digits;
+ const dg=(n,c)=>text?`<div class="dg t ${c}">${n}</div>`:`<div class="dg dg${n} ${c}"></div>`;
+ let lines='';for(let i=0;i<=9;i++){const w=i%3?.22:.7;
+  lines+=`<line x1="${i*10}" y1="0" x2="${i*10}" y2="90" pathLength="1" stroke-width="${w}" style="animation-delay:${i*45}ms"/><line x1="0" y1="${i*10}" x2="90" y2="${i*10}" pathLength="1" stroke-width="${w}" style="animation-delay:${i*45+30}ms"/>`}
+ let cells='';for(let k=0;k<81;k++){
+  if(!read[k]){cells+='<div class="ic"></div>';continue}
+  const b=bad.has(k);
+  cells+=`<div class="ic" data-k="${k}">${dg(read[k],'w'+(b?' wrong':''))}${b?dg(final[k],'right')+`<i class="was">${read[k]}</i>`:''}</div>`}
+ const el=div('i-board '+mode);
+ el.innerHTML=`<svg viewBox="0 0 90 90">${lines}</svg><div class="i-cells">${cells}</div><div class="i-ring"></div>`;
+ return{el,fixes}}
+
+/* the correction story on a board: digits appear, wrong ones turn red, a ring walks to each and turns it green */
+function sequence(b,at,cb,cfg){
+ const el=b.el,ring=el.querySelector('.i-ring');
+ el.querySelectorAll('.dg.w').forEach(e=>{const k=+e.parentNode.dataset.k;at(cfg.d0+(Math.floor(k/9)+k%9)*cfg.dst,()=>e.classList.add('on'))});
+ let t=cfg.m0;
+ if(b.fixes.length){
+  at(t,()=>{cb.mis&&cb.mis();el.querySelectorAll('.dg.wrong').forEach(e=>e.classList.add('bad','shake'))});
+  t+=cfg.s0;at(t,()=>cb.search&&cb.search());
+  b.fixes.forEach((k,j)=>{const s=t+j*cfg.step,x=k%9*100,y=Math.floor(k/9)*100;
+   at(s,()=>{ring.style.opacity=1;ring.style.transform=`translate(${x}%,${y}%)`});
+   at(s+cfg.fix,()=>{const c=el.querySelector(`.ic[data-k="${k}"]`);c.querySelector('.wrong').classList.remove('on');c.querySelector('.right').classList.add('on');cb.fix&&cb.fix(k,j)})});
+  t+=b.fixes.length*cfg.step+150;
+  at(t,()=>{ring.style.opacity=0;el.querySelectorAll('.dg.right').forEach(e=>e.classList.add('pulse'))});
+ }
+ at(t,()=>cb.solved&&cb.solved());
+ return t}
+
+function heroData(){
+ const d=D.demo;if(d&&d.read)return{read:d.read.slice(),final:d.final.slice()};
+ const s='53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79',final=[...s].map(c=>c=='.'?0:+c),read=final.slice();
+ [4,40].forEach(k=>{read[k]=read[k]%9+1});return{read,final}}
+function hero(hold){
+ const h=$('heroGrid');h.innerHTML='';const g=heroData(),b=boardEl(g.read,g.final,'static');
+ b.el.classList.add('fin');if(hold){b.el.style.animation='none';b.el.style.opacity=0}
+ h.appendChild(b.el)}
+
+/* ---------- gauges ---------- */
+function gauge(host,grad){
+ host.innerHTML='';const r=64,len=2*Math.PI*r,id='gr'+host.id;
+ const s=el('svg',{viewBox:'0 0 170 170'},host),df=el('defs',{},s),g=el('linearGradient',{id,x1:0,y1:0,x2:1,y2:1},df);
+ el('stop',{offset:0,'stop-color':grad[0]},g);el('stop',{offset:1,'stop-color':grad[1]},g);
+ el('circle',{cx:85,cy:85,r,class:'track'},s);
+ const a=el('circle',{cx:85,cy:85,r,class:'arc',stroke:`url(#${id})`,'stroke-dasharray':`0 ${len}`},s);
+ const gc=div('gc',host);gc.innerHTML='<div><b>0</b><br><span></span></div>';const num=gc.querySelector('b');
+ return{set(frac,dec,sub,mode){const to=Math.max(0,Math.min(1,frac))*len;
+   gc.querySelector('span').textContent=sub;
+   if(mode==='enter'&&!REDUCED){a.style.strokeDasharray=`0 ${len}`;num._v=0;raf(()=>{a.style.strokeDasharray=`${to} ${len}`})}
+   else a.style.strokeDasharray=`${to} ${len}`;
+   const fmt=x=>x.toFixed(dec);
+   if(mode==='enter')countUp(num,frac*100,fmt,1300,0);
+   else if(mode==='switch')countUp(num,frac*100,fmt,1000,num._v||0);
+   else countUp(num,frac*100,fmt,0)}}
+}
+let G1,G2,gk=1;
+function setG1(k,mode){
+ const e3=D.exp3;if(!e3)return;gk=k;
+ const r=(m)=>M(find(e3,{misreads:k,method:m})[REC]);
+ G1.set(r('NN-guided (UCS)'),0,k+(k==1?' misread':' misreads'),mode);
+ swapText($('g1a'),f2(r('no correction')));swapText($('g1b'),f2(r('random correction')));
+}
+function swapText(n,t){if(n.textContent===t)return;if(REDUCED||!ANIM){n.textContent=t;return}
+ n.style.transition='opacity .18s,transform .18s';n.style.opacity=0;n.style.transform='translateY(4px)';
+ setTimeout(()=>{n.textContent=t;n.style.opacity=1;n.style.transform='none'},180)}
+function gauges(mode){
+ G1=gauge($('g1'),['#0075ff','#21d4fd']);G2=gauge($('g2'),['#01b574','#21d4fd']);
+ setG1(gk,mode);
+ if(D.nn){G2.set(D.nn.mlp.test_acc_after,1,'test accuracy %',mode);$('g2a').textContent=f3(D.nn.logreg.test_acc);$('g2b').textContent=f4(D.nn.mlp.ece_after_temperature_scaling)}
+}
+$('seg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||+b.dataset.k===gk)return;
+ [...$('seg').children].forEach(x=>x.classList.toggle('on',x===b));ANIM=true;setG1(+b.dataset.k,'switch')});
+
+/* ---------- chart helpers ---------- */
+function frame(host,h){
+ host.innerHTML='';const W=Math.max(300,host.clientWidth),m={t:16,r:16,b:36,l:50};
+ const s=el('svg',{viewBox:`0 0 ${W} ${h}`});host.appendChild(s);const defs=el('defs',{},s);
+ const gl=el('filter',{id:'glow'+host.id,x:'-30%',y:'-30%',width:'160%',height:'160%'},defs);
+ el('feGaussianBlur',{stdDeviation:3,result:'b'},gl);const mg=el('feMerge',{},gl);el('feMergeNode',{in:'b'},mg);el('feMergeNode',{in:'SourceGraphic'},mg);
+ const tip=div('tip',host);tip.style.opacity=0;
+ return{W,H:h,m,iw:W-m.l-m.r,ih:h-m.t-m.b,s,defs,g:el('g',{transform:`translate(${m.l},${m.t})`},s),tip,host,fid:'glow'+host.id}}
+function tipShow(f,e,t){const r=f.host.getBoundingClientRect();f.tip.textContent=t;f.tip.style.opacity=1;
+ f.tip.style.left=Math.max(0,Math.min(f.W-f.tip.offsetWidth,e.clientX-r.left+12))+'px';f.tip.style.top=Math.max(0,e.clientY-r.top-38)+'px'}
+const tipHide=f=>f.tip.style.opacity=0;
+function yscale(f,log,lo,hi){
+ if(log){const A=Math.floor(Math.log10(lo*.7)),B=Math.ceil(Math.log10(hi*1.2));return{log:1,lo:10**A,hi:10**B,fn:v=>f.ih-(Math.log10(Math.max(v,10**A))-A)/(B-A)*f.ih}}
+ return{log:0,lo:0,hi,fn:v=>f.ih-v/hi*f.ih}}
+function ticks(y){if(y.log){const r=[];for(let p=Math.round(Math.log10(y.lo));p<=Math.round(Math.log10(y.hi));p++)r.push(10**p);return r}
+ const st=y.hi<=1.5?.25:Math.ceil(y.hi/5),r=[];for(let v=0;v<=y.hi+1e-9;v+=st)r.push(v);return r}
+const tlab=v=>v>=1e6?v/1e6+'M':v>=1000?v/1000+'k':String(+v.toFixed(2));
+function axes(f,y,xt,xl){
+ ticks(y).forEach(v=>{const yy=y.fn(v);el('line',{x1:0,x2:f.iw,y1:yy,y2:yy,class:'grd'},f.g);
+  const t=el('text',{x:-10,y:yy+4,'text-anchor':'end',class:'axt'},f.g);t.textContent=tlab(v)});
+ xt.forEach(([x,l])=>{const t=el('text',{x,y:f.ih+22,'text-anchor':'middle',class:'axt'},f.g);t.textContent=l});
+ if(xl){const t=el('text',{x:f.iw/2,y:f.ih+36,'text-anchor':'middle',class:'axt'},f.g);t.textContent=xl}}
+function mono(P){const n=P.length;if(n<3)return P.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join('');
+ const dx=[],dy=[],m=[],t=[];for(let i=0;i<n-1;i++){dx[i]=P[i+1][0]-P[i][0];dy[i]=P[i+1][1]-P[i][1];m[i]=dy[i]/dx[i]}
+ t[0]=m[0];t[n-1]=m[n-2];for(let i=1;i<n-1;i++)t[i]=m[i-1]*m[i]<=0?0:(m[i-1]+m[i])/2;
+ for(let i=0;i<n-1;i++){if(m[i]===0){t[i]=t[i+1]=0}else{const a=t[i]/m[i],b=t[i+1]/m[i],s=a*a+b*b;if(s>9){const k=3/Math.sqrt(s);t[i]=k*a*m[i];t[i+1]=k*b*m[i]}}}
+ let d='M'+P[0][0]+' '+P[0][1];for(let i=0;i<n-1;i++){const h=dx[i]/3;d+=`C${P[i][0]+h} ${P[i][1]+t[i]*h} ${P[i+1][0]-h} ${P[i+1][1]-t[i+1]*h} ${P[i+1][0]} ${P[i+1][1]}`}return d}
+function legend(id,items){const h=$(id);h.innerHTML='';items.forEach(([n,c])=>{const s=document.createElement('span');s.style.color=c;s.innerHTML=`<i style="background:${c}"></i><em style="font-style:normal;color:#a0aec0">${n}</em>`;h.appendChild(s)})}
+
+/* ---------- line chart (smooth, glowing, animated) ---------- */
+function line(host,series,o){
+ const all=series.flatMap(s=>s.p),f=frame(host,300),xs=[...new Set(all.map(p=>p.x))].sort((a,b)=>a-b);
+ const x=v=>(v-xs[0])/(xs[xs.length-1]-xs[0])*f.iw;
+ const y=yscale(f,o.log,Math.min(...all.map(p=>p.y)),o.log?Math.max(...all.map(p=>p.y+p.sd)):1.05);
+ axes(f,y,xs.map(v=>[x(v),String(v)]),o.xl);
+ const A=ANIM&&!REDUCED;
+ series.forEach((s,si)=>{
+  const gid='lg'+host.id+si,g=el('linearGradient',{id:gid,x1:0,y1:0,x2:0,y2:1},f.defs);
+  el('stop',{offset:0,'stop-color':s.c,'stop-opacity':.38},g);el('stop',{offset:1,'stop-color':s.c,'stop-opacity':0},g);
+  const P=s.p.map(p=>[x(p.x),y.fn(p.y)]),d=mono(P);
+  if(!s.dash){const ar=el('path',{d:d+`L${P[P.length-1][0]} ${f.ih}L${P[0][0]} ${f.ih}Z`,fill:`url(#${gid})`},f.g);
+   if(A){ar.style.opacity=0;ar.style.transition=`opacity 1.2s ${400+si*150}ms`;raf(()=>ar.style.opacity=1)}}
+  const pa=el('path',{d,fill:'none',stroke:s.c,'stroke-width':s.dash?2:2.8,'stroke-linecap':'round','stroke-dasharray':s.dash?'7 6':'',filter:s.dash?'':`url(#${f.fid})`},f.g);
+  if(A){if(s.dash){pa.style.opacity=0;pa.style.transition=`opacity 1s ${900}ms`;raf(()=>pa.style.opacity=1)}
+   else{const L=pa.getTotalLength();pa.style.strokeDasharray=L;pa.style.strokeDashoffset=L;pa.getBoundingClientRect();
+    pa.style.transition=`stroke-dashoffset 1.5s ${si*150}ms cubic-bezier(.4,0,.2,1)`;pa.style.strokeDashoffset=0}}
+  s.p.forEach((p,i)=>{
+   const l=el('line',{x1:x(p.x),x2:x(p.x),y1:y.fn(Math.max(y.lo,p.y-p.sd)),y2:y.fn(Math.min(y.hi,p.y+p.sd)),stroke:s.c,'stroke-opacity':.4,'stroke-width':1.6},f.g);
+   const c=el('circle',{cx:x(p.x),cy:y.fn(p.y),r:4.6,fill:'#0a1240',stroke:s.c,'stroke-width':2.4,class:'pt'},f.g);
+   if(A){[l,c].forEach(n=>{n.style.opacity=0;n.style.transition=`opacity .5s ${900+i*140}ms`;raf(()=>n.style.opacity=1)})}
+   c.addEventListener('mousemove',e=>tipShow(f,e,`${s.n} · ${p.x} misread${p.x==1?'':'s'}: ${o.f(p.y)} ± ${o.f(p.sd)}`));c.addEventListener('mouseleave',()=>tipHide(f))})});
+}
+
+/* ---------- bar chart (rounded, gradient, grow-in) ---------- */
+function bars(host,groups,names,o){
+ const f=frame(host,300),all=groups.flatMap(g=>g.b),A=ANIM&&!REDUCED;
+ const y=yscale(f,o.log,Math.min(...all.map(b=>b.y)),o.log?Math.max(...all.map(b=>b.y+b.sd)):1.1),gw=f.iw/groups.length,bw=gw*.78/names.length;
+ axes(f,y,groups.map((g,i)=>[gw*(i+.5),g.l]),o.xl);
+ names.forEach((n,i)=>{const g=el('linearGradient',{id:'bg'+host.id+i,x1:0,y1:0,x2:0,y2:1},f.defs);
+  el('stop',{offset:0,'stop-color':COL[i]},g);el('stop',{offset:1,'stop-color':COL[i],'stop-opacity':.18},g)});
+ groups.forEach((g,gi)=>g.b.forEach((b,i)=>{
+  const bx=gw*gi+gw*.11+i*bw,top=y.fn(Math.min(b.y,y.hi)),hh=Math.max(2,f.ih-top);
+  const r=el('rect',{x:bx+2,y:top,width:Math.max(4,bw-4),height:hh,rx:Math.min(7,(bw-4)/2),fill:`url(#bg${host.id}${i})`,class:'bar'},f.g);
+  r.style.filter=`drop-shadow(0 0 6px ${COL[i]}66)`;
+  if(A){r.style.transform='scaleY(0)';r.style.transition=`transform 1s ${gi*120+i*80}ms cubic-bezier(.2,.8,.2,1),filter .25s`;raf(()=>r.style.transform='scaleY(1)')}
+  r.addEventListener('mousemove',e=>tipShow(f,e,`${names[i]} · ${g.l}: ${o.f(b.y)} ± ${o.f(b.sd)}`));r.addEventListener('mouseleave',()=>tipHide(f));
+  const cx=bx+bw/2,l=el('line',{x1:cx,x2:cx,y1:y.fn(Math.max(y.lo,b.y-b.sd)),y2:y.fn(Math.min(y.hi,b.y+b.sd)),stroke:'#fff','stroke-opacity':.55,'stroke-width':1.2},f.g);
+  let t;if(o.lab){t=el('text',{x:cx,y:y.fn(Math.min(y.hi,b.y+b.sd))-5,class:'vl'},f.g);t.textContent=o.f(b.y)}
+  if(A)[l,t].forEach(n=>{if(!n)return;n.style.opacity=0;n.style.transition=`opacity .5s ${gi*120+i*80+800}ms`;raf(()=>n.style.opacity=1)})}));
+}
+
+/* ---------- charts registry: draw when scrolled into view ---------- */
+const charts=[];
+function chart(id,fn){charts.push({id,fn,shown:false})}
+function build(){
+ const e1=D.exp1,e2=D.exp2,e3=D.exp3,empty='Run  python -m eval.experiments  to create the data.';
+ const ser=key=>['UCS','GREEDY','ASTAR'].map((a,i)=>({n:NM[a],c:COL[i],dash:a=='ASTAR',p:e1.filter(r=>r.algorithm==a&&(key!='nodes expanded'||+r.misreads>0)).map(r=>({x:+r.misreads,y:M(r[key]),sd:S(r[key])}))}));
+ const none=id=>{$(id).innerHTML='<div class="empty">'+empty+'</div>'};
+ if(e1){legend('lg1',ser(REC).map(s=>[s.n,s.c]));legend('lg2',ser(REC).map(s=>[s.n,s.c]));
+  chart('c1',()=>line($('c1'),ser('nodes expanded'),{log:1,f:f1,xl:'injected misreads'}));
+  chart('c2',()=>line($('c2'),ser(REC),{log:0,f:f2,xl:'injected misreads'}))}else{none('c1');none('c2')}
+ if(e2){const nm=['BT','BT+FC','BT+FC+AC-3'];legend('lg3',nm.map((n,i)=>[n,COL[i]]));
+  chart('c3',()=>bars($('c3'),[25,30,35].map(v=>({l:v+' givens',b:nm.map(n=>{const r=find(e2,{givens:v,method:n}).assignments;return{y:M(r),sd:S(r)}})})),nm,{log:1,f:fi,xl:'puzzle difficulty'}))}else none('c3');
+ if(e3){const nm=['NN-guided (UCS)','no correction','random correction'];legend('lg4',nm.map((n,i)=>[n,COL[i]]));
+  chart('c4',()=>bars($('c4'),[0,1,2,3].map(v=>({l:v+(v==1?' misread':' misreads'),b:nm.map(n=>{const r=find(e3,{misreads:v,method:n})[REC];return{y:M(r),sd:S(r)}})})),nm,{log:0,f:f2,lab:1,xl:'injected misreads'}))}else none('c4');
+}
+let io;
+function observe(){
+ if(io)io.disconnect();
+ io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;const c=charts.find(x=>x.id===e.target.id);
+  if(c&&!c.shown){c.shown=true;ANIM=true;c.fn()}}),{threshold:.25});
+ charts.forEach(c=>{c.shown=false;const n=$(c.id);if(n)io.observe(n)});
+}
+
+/* ---------- table + timeline ---------- */
+function table(anim){
+ const e1=D.exp1,tb=$('tb1');tb.innerHTML='';if(!e1)return;
+ const rows=e1.filter(r=>+r.misreads>0).sort((a,b)=>a.misreads-b.misreads||['UCS','GREEDY','ASTAR'].indexOf(a.algorithm)-['UCS','GREEDY','ASTAR'].indexOf(b.algorithm));
+ rows.forEach((r,i)=>{const tr=document.createElement('tr'),ai=['UCS','GREEDY','ASTAR'].indexOf(r.algorithm),rec=M(r[REC]);
+  tr.innerHTML=`<td><span class="dot" style="background:${COL[ai]};box-shadow:0 0 8px ${COL[ai]}"></span>${NM[r.algorithm]}</td><td class="num">${r.misreads}</td><td class="num">${f1(M(r['nodes expanded']))}</td><td class="num">${f1(M(r['CSP calls']))}</td><td><div class="pb"><em>${f2(rec)}</em><span><i data-w="${rec*100}"></i></span></div></td>`;
+  tb.appendChild(tr)});
+ raf(()=>tb.querySelectorAll('i').forEach((b,i)=>{b.style.transitionDelay=(i*50)+'ms';b.style.width=b.dataset.w+'%'}));
+}
+function timeline(){
+ const ul=$('tl');ul.innerHTML='';const d=D.demo;
+ if(!d){$('runsub').textContent='Run run_demo.py to fill this in.';return}
+ $('runsub').innerHTML=`Seed ${d.seed}, ${d.misreads} injected misread${d.misreads==1?'':'s'} &middot; <b>${d.exact?'exact match':'different solution'}</b>`;
+ const u=d.algos.find(a=>a.name=='UCS')||d.algos[0],cs=d.csp[d.csp.length-1],read=d.read.filter(v=>v).length;
+ const steps=[
+  ['Neural network read the grid',`${read} digits read from the handwritten mosaic`,'#3d8bff'],
+  ['AC-3 conflict check',d.conflicts?`${d.conflicts} duplicate pair${d.conflicts==1?'':'s'} found, puzzle unsolvable`:'no conflict, puzzle solvable','#f0605d'],
+  ['Search for corrections',u?`${u.name}: ${u.expanded} expanded, ${u.generated} generated, cost ${u.cost.toFixed(2)}`:'-','#a78bfa'],
+  ['Corrections applied',d.corrections.length?d.corrections.map(c=>`row ${Math.floor(c[0]/9)+1} col ${c[0]%9+1}: ${c[1]} → ${c[2]}`).join(' · '):'none needed','#ffb547'],
+  ['CSP solved the puzzle',cs?`${cs.name}: ${fi(cs.assignments)} assignments, ${fi(cs.backtracks)} backtracks`:'-','#01b574']];
+ steps.forEach((s,k)=>{const li=document.createElement('li');li.style.setProperty('--k',k);li.style.setProperty('--c',s[2]);
+  li.innerHTML=`<span class="d"></span><div><b>${s[0]}</b><span>${s[1]}</span></div>`;ul.appendChild(li)});
+}
+
+/* ---------- start / replay / resize ---------- */
+function play(hold){
+ ANIM=true;document.body.classList.remove('ready');void document.body.offsetWidth;document.body.classList.add('ready');
+ kpis();hero(hold);gauges('enter');table();timeline();
+ charts.forEach(c=>{c.shown=false});window.scrollTo({top:0,behavior:'smooth'});observe();
+}
+/* ---------- intro: the puzzle solves itself, then flies into the hero card ---------- */
+const DBG=(location.search.match(/introT=(\d+)/)||[])[1],FL=(location.search.match(/flight=([\d.]+)/)||[])[1];
+function intro(done){
+ if(STILL||REDUCED){done();return}
+ const g=heroData(),b=boardEl(g.read,g.final,'intro');
+ hero(true);                                   /* invisible copy of the board in the hero card: the landing spot */
+ const lt=(s,base,step)=>[...s].map((c,i)=>`<span class="lt" style="animation-delay:${base+i*step}ms">${c==' '?'&nbsp;':c}</span>`).join('');
+ const ov=document.createElement('div');ov.id='intro';if(DBG!=null)ov.classList.add('dbg');
+ ov.innerHTML=`<div class="i-stack"><div class="i-slot"></div>
+  <div class="i-foot"><div class="i-cap"></div><div class="i-title"><div class="i-h">${lt('SUDOKU READER',0,45)}</div><div class="i-p">${lt('__PROJECT__',500,18)}</div>
+  <div class="i-me"><span>__NAME__</span><span class="tag" style="--d:1150ms">ID __ID__</span></div></div></div></div>
+  <button class="btn i-skip">Skip &rsaquo;</button><div class="i-prog"></div>`;
+ ov.querySelector('.i-slot').appendChild(b.el);
+ document.body.appendChild(ov);
+ const T=[];let over=false;
+ const at=(ms,fn)=>{if(DBG!=null){if(ms<=+DBG)fn()}else T.push(setTimeout(fn,ms))};
+ const cap=ov.querySelector('.i-cap');
+ const say=(t,c)=>{const set=()=>{cap.textContent=t;cap.className='i-cap show '+(c||'')};if(DBG!=null){set();return}cap.classList.remove('show');setTimeout(set,220)};
+ function finish(){
+  if(over)return;over=true;T.forEach(clearTimeout);document.removeEventListener('keydown',key);
+  const el=b.el;el.classList.add('fin');                         /* settle to the final corrected state, instantly */
+  const tg=$('heroGrid').querySelector('.i-board'),f=el.getBoundingClientRect(),l=tg?tg.getBoundingClientRect():null;
+  el.style.animation='none';
+  Object.assign(el.style,{position:'fixed',left:f.left+'px',top:f.top+'px',width:f.width+'px',height:f.height+'px',margin:'0',zIndex:102,transformOrigin:'0 0',transition:'none'});
+  document.body.appendChild(el);                                 /* keeps the exact same screen position */
+  const P=FL!=null?+FL:1,tr=l?`translate(${(l.left-f.left)*P}px,${(l.top-f.top)*P}px) scale(${1+(l.width/f.width-1)*P})`:'';
+  if(FL!=null){ov.style.transition='none';ov.style.opacity=1-P;el.style.transform=tr;startHold();return}
+  ov.classList.add('out');startHold();                           /* intro fades, dashboard fades in */
+  if(!l){requestAnimationFrame(()=>{el.style.transition='opacity .6s';el.style.opacity=0});setTimeout(()=>{el.remove();ov.remove()},900);return}
+  raf(()=>{el.style.transition='transform 1.05s cubic-bezier(.65,0,.25,1)';el.style.transform=tr});
+  setTimeout(()=>{const g2=$('heroGrid').querySelector('.i-board');if(g2)g2.style.opacity=1;setTimeout(()=>el.remove(),340);ov.remove()},1120);
+ }
+ const key=e=>{if(['Escape','Enter',' '].includes(e.key))finish()};
+ ov.querySelector('.i-skip').addEventListener('click',e=>{e.stopPropagation();finish()});ov.addEventListener('click',finish);document.addEventListener('keydown',key);
+ say('Reading handwritten digits…');
+ let t=sequence(b,at,{mis:()=>say('Misread detected','bad'),search:()=>say('Search: cheapest correction'),solved:()=>say('CSP solved the puzzle ✓','ok')},
+  {d0:500,dst:40,m0:2000,s0:700,step:750,fix:480});
+ t+=800;at(t,()=>{cap.classList.remove('show');ov.querySelector('.i-title').classList.add('show')});
+ const end=t+1900;ov.style.setProperty('--T',end+'ms');at(end,finish);
+}
+const unlock=()=>document.documentElement.classList.remove('lock');
+function startHold(){unlock();play(true)}
+function startNow(){unlock();play()}
+
+/* ---------- corrected cases: real puzzles solved by the actual pipeline ---------- */
+let CI=-1,CT=[],cAuto=true,cVisible=false,cTimer=null;
+const caseKind=c=>c.exact?['ok','exact']:c.status==='solved'?['warn','different']:['badc','unreadable'];
+function initCases(){
+ const cs=D.cases||[],sec=$('sec-cases');
+ if(!cs.length){sec.hidden=true;return}
+ const ul=$('caseList');ul.innerHTML='';
+ cs.forEach((c,i)=>{const li=document.createElement('li'),k=caseKind(c);
+  li.innerHTML=`<button class="case-item" data-i="${i}"><span class="n">${i+1}</span><span class="m">Case ${i+1}<small>${c.misreads} misread${c.misreads==1?'':'s'} &middot; seed ${c.seed}</small></span><span class="st ${k[0]}">${k[1]}</span></button>`;
+  ul.appendChild(li)});
+ ul.addEventListener('click',e=>{const b=e.target.closest('.case-item');if(b)playCase(+b.dataset.i)});
+ $('caseReplay').addEventListener('click',()=>playCase(Math.max(CI,0)));
+ $('caseAuto').addEventListener('click',e=>{cAuto=!cAuto;e.currentTarget.classList.toggle('on',cAuto);
+  const act=document.querySelector('.case-item.active');if(!cAuto){clearTimeout(cTimer);act&&act.classList.remove('run')}else playCase(Math.max(CI,0))});
+ new IntersectionObserver(es=>{const v=es[0].isIntersecting;if(v===cVisible)return;cVisible=v;
+  if(v)playCase(CI<0?0:CI);else{clearTimeout(cTimer);CT.forEach(clearTimeout)}},{threshold:.3}).observe(sec);
+}
+function playCase(i){
+ clearTimeout(cTimer);CT.forEach(clearTimeout);CT=[];
+ const c=D.cases[i],stage=$('caseStage'),n=D.cases.length;CI=i;
+ document.querySelectorAll('.case-item').forEach((b,j)=>{b.classList.toggle('active',j===i);b.classList.remove('run')});
+ stage.classList.add('swap');
+ CT.push(setTimeout(()=>{
+  const b=boardEl(c.read,c.final,'case'),k=caseKind(c);
+  $('caseBoard').replaceChildren(b.el);
+  $('caseInfo').innerHTML=`<h3>Case ${i+1} &middot; ${c.misreads} injected misread${c.misreads==1?'':'s'}<span class="res ${k[0]}" id="res">${k[0]==='ok'?'Exact solution recovered':k[0]==='warn'?'Solved, but a different valid puzzle':'Unreadable'}</span></h3>
+   <div class="cstats"><div><small>Correction cost</small><b data-v="${c.cost}" data-f="f2">–</b></div><div><small>Nodes expanded</small><b data-v="${c.expanded}" data-f="fi">–</b></div><div><small>Nodes generated</small><b data-v="${c.generated}" data-f="fi">–</b></div><div><small>CSP calls</small><b data-v="${c.csp_calls}" data-f="fi">–</b></div></div>
+   <ul class="clog" id="clog"></ul>`;
+  stage.classList.remove('swap');
+  const at=(ms,fn)=>CT.push(setTimeout(fn,ms)),F={f2,fi};
+  const end=sequence(b,at,{
+   fix:(cell,j)=>{const w=c.corrections.find(x=>x[0]===cell);if(!w)return;const li=document.createElement('li');
+    li.innerHTML=`<span>row ${Math.floor(cell/9)+1}, col ${cell%9+1}</span><i>${w[1]}</i> &rarr; <em>${w[2]}</em><span>cost ${w[3].toFixed(2)}</span>`;$('clog').appendChild(li)},
+   solved:()=>{$('res').classList.add('show');ANIM=true;document.querySelectorAll('#caseInfo .cstats b').forEach(e=>countUp(e,+e.dataset.v,F[e.dataset.f],900))}},
+   {d0:150,dst:22,m0:1000,s0:450,step:650,fix:420});
+  if(!b.fixes.length)at(end,()=>{$('clog').innerHTML='<li><span>No correction was needed.</span></li>'});
+  if(cAuto){const wait=end+400+2800,act=document.querySelector('.case-item.active');
+   at(300,()=>{if(act){act.style.setProperty('--cyc',(wait-300)+'ms');act.classList.add('run')}});
+   cTimer=setTimeout(()=>{if(cAuto&&cVisible)playCase((i+1)%n)},wait)}
+ },320));
+}
+
+build();initCases();
+if(STILL||REDUCED){startNow()}else{document.documentElement.classList.add('lock');intro(startHold)}
+$('replayIntro').addEventListener('click',()=>{window.scrollTo(0,0);document.documentElement.classList.add('lock');intro(startHold)});
+$('replay').addEventListener('click',()=>play());
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{ANIM=false;charts.forEach(c=>{if(c.shown)c.fn()});gauges('none')},160)});
+/* sidebar highlight */
+const secs=['sec-overview','sec-cases','sec-search','sec-csp','sec-run'].map(id=>$(id)).filter(Boolean),links=[...document.querySelectorAll('#nav a')];
+function spy(){let cur=0;secs.forEach((s,i)=>{if(s.getBoundingClientRect().top<window.innerHeight*.2)cur=i});
+ const id=location.hash=='#sec-nn'?'sec-nn':secs[cur].id;
+ links.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+(id==='sec-nn'?'sec-nn':id)))}
+addEventListener('scroll',spy,{passive:true});spy();
+</script></body></html>
