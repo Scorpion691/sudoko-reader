@@ -1,16 +1,9 @@
 # Individual contribution statement
 
-**Abdelrhman Elhawarry, ID 320210121 - Project P7: Handwritten Sudoku Reader and Solver**
+**Abdelrhman Elhawarry, ID 320210121. Project P7: Handwritten Sudoku Reader and Solver.**
 
-I carried out this project individually. My contribution covers:
+I worked on this project alone. I chose P7 and I directed the whole work: what to build, how the dashboard, the intro animation, the report and the slides should look, and what to change at each step.
 
-- the data pipeline: reproducible MNIST preprocessing, the seeded Sudoku puzzle and handwritten-mosaic generator, and the documented rule for injecting hard digits;
-- the NumPy MLP, the logistic-regression baseline, temperature scaling and the calibration measurements;
-- the Sudoku CSP with backtracking, forward checking and AC-3 as separate switches, with counters;
-- UCS, Greedy and A* search over correction sets, including the admissible conflict heuristic;
-- the integrated pipeline, the 19 tests, and the three experiments (5 seeds, mean and standard deviation);
-- the dashboard, the desktop launcher, the report and the presentation.
+I used an AI coding assistant (Claude Code) to write most of the code, the report and the slides, step by step from my instructions. I ran the demo and the app, checked the results, and asked for changes when something was wrong (for example, the PDF was slow, so it was rebuilt in a lighter way).
 
-**AI assistance:** this work was developed with the help of an AI coding assistant (Claude Code). I ran the code, checked the results and can explain every component.
-
-<!-- Edit before submitting: the statement must describe your own contribution truthfully and follow your course's rules on AI assistance. Maximum 200 words. -->
+The project contains: the data pipeline, the NumPy neural network, the CSP (backtracking, forward checking, AC-3), the search (UCS, Greedy, A*), the integration, 19 tests, three experiments with 5 seeds, the dashboard, a desktop app, the report and the slides.

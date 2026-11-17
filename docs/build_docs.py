@@ -91,7 +91,25 @@ def browser():
     return next((b for b in BROWSERS if os.path.exists(b)), None)
 
 
+def writable(path):
+    try:
+        with open(path, "ab"):
+            return True
+    except PermissionError:
+        return False
+    except OSError:
+        return True
+
+
 def to_pdf(html, pdf, query=""):
+    if os.path.exists(pdf) and not writable(pdf):  # the old PDF is open in a viewer (Windows locks it)
+        alt = pdf[:-4] + "_new.pdf"
+        print("%s is open in another program; writing %s instead (close the viewer and run again)" % (os.path.basename(pdf), os.path.basename(alt)))
+        pdf = alt
+    return _to_pdf(html, pdf, query)
+
+
+def _to_pdf(html, pdf, query=""):
     b = browser()
     if not b:
         print("no Edge/Chrome found: PDF skipped for", html)
@@ -118,4 +136,4 @@ if __name__ == "__main__":
             continue
         h = render(tpl, name + ".html", D, N)
         ok = to_pdf(h, os.path.join(HERE, name + ".pdf"), "?print&pdf" if name == "Slides" else "?pdf")
-        print(name, "html ok;", "pdf pages:" if ok else "pdf skipped", pages(os.path.join(HERE, name + ".pdf")) if ok else "")
+        print(name, "html ok;", "pdf written" if ok else "pdf skipped")

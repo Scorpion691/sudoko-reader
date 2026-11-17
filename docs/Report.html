@@ -78,7 +78,8 @@ pre{margin:0;font:11px/1.5 Consolas,'Cascadia Mono',monospace;color:#bcd3ff;back
 .cover .who b{font-size:19px}
 .cover .bd{width:300px;margin:6px auto 0}
 .arch{width:100%;height:auto}
-.refs{font-size:10.6px;color:#c6d2e6;gap:4px}
+.refs{font-size:10px;color:#c6d2e6;gap:2px}
+.cx td,.cx th{padding:3px 8px;font-size:10.3px}
 .case{padding:9px 11px;display:grid;grid-template-columns:172px 1fr;gap:12px;align-items:center}
 .case .meta{display:flex;flex-direction:column;gap:4px;font-size:11px}
 .case .meta b{font-size:13px}
@@ -395,6 +396,14 @@ return "unreadable", 5 least confident cells</pre>
    <li>Forward checking and AC-3 reduce CSP effort substantially on sparse puzzles, and AC-3 doubles as the detector that tells the integrated system the reading is broken.</li>
    <li>The main weakness is the goal &ldquo;solvable&rdquo;: the cheapest solvable puzzle is not always the written one.</li>
   </ul>
+  <h3>Time complexity</h3>
+  <table class="cx"><thead><tr><th>Part (derivations in <code>COMPLEXITY.md</code>)</th><th>Time</th><th>Size / measured</th></tr></thead><tbody>
+   <tr><td>Network inference</td><td>O(n&middot;P)</td><td>P = 109,120 weights; 8.8 M operations per puzzle</td></tr>
+   <tr><td>Network training</td><td>O(E&middot;N&middot;P)</td><td>about 1.5&middot;10<sup>11</sup> operations, 16 s on a CPU</td></tr>
+   <tr><td>Conflict check, AC-3</td><td>O(n&middot;p), O(n&middot;d&middot;p)</td><td>n = 81, p = 20: 1,620; AC-3 at most 15.5 k revisions (9,372 measured)</td></tr>
+   <tr><td>Backtracking, forward checking</td><td>O(d<sup>f</sup>) worst case, O(n) per node</td><td>f = empty cells; 51 to 4,332 assignments measured</td></tr>
+   <tr><td>Search over corrections</td><td>O(S&middot;(b&middot;n&middot;p + T<sub>csp</sub>))</td><td>S = 4,091 states (k = 3), 25,931 (k = 4); b = 30; 12.7 expansions (A*), 91.9 (UCS) measured</td></tr>
+   <tr><td>Whole pipeline, one puzzle</td><td>O(n&middot;P + expanded&middot;(b&middot;n&middot;p + T<sub>csp</sub>))</td><td>a few CSP calls; tens of milliseconds</td></tr></tbody></table>
   <h3>Reproducing the results</h3>
 <pre>pip install -r requirements.txt
 python data/make_data.py --download --seed 0    # MNIST + 50k/10k split
@@ -403,7 +412,7 @@ python run_demo.py --seed 3 --misreads 2        # demo and dashboard
 python -m pytest tests -q                       # 19 tests
 python -m eval.experiments --seeds 5 --n 20     # the three experiments
 python docs/build_docs.py                       # this report and the slides</pre>
-  <p>Everything is seeded; the experiment tables (<code>outputs/exp*.csv</code>) and this report are regenerated from the code. A desktop launcher (<code>app.py</code> or the built <code>SudokuReader.exe</code>) runs the demo with one button and opens the dashboard.</p>
+  <p>Everything is seeded, and the tables and this report are regenerated from the code. <code>app.py</code> (or <code>SudokuReader.exe</code>) runs the demo with one button.</p>
   <h3>References</h3>
   <ul class="refs">
    <li>LeCun, Y., Bottou, L., Bengio, Y., Haffner, P. (1998). Gradient-based learning applied to document recognition. <i>Proceedings of the IEEE</i>, 86(11).</li>

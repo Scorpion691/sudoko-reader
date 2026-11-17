@@ -74,4 +74,5 @@ NN-guided 0.96 / 0.77 / 0.55; no correction 0 / 0 / 0; random correction 0.23 / 
 * `docs/Report.pdf` (12 pages) and `docs/Slides.pdf` (15 slides, 10 min + 5 min live demo) are built from the real result tables:
   `python docs/build_docs.py` (needs Microsoft Edge or Chrome for the PDF). `docs/Slides.html` is the interactive deck
   (arrow keys, `N` = speaker notes, `F` = fullscreen); `docs/check_overflow.py` checks that no report page overflows.
-* `CONTRIBUTION.md` is the individual contribution statement (edit it so that it is true for you).
+* `CONTRIBUTION.md` is the individual contribution statement; `COMPLEXITY.md` derives the time complexity of every part
+  (network, CSP, search, pipeline) with measured numbers.
