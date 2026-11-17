@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Handwritten Sudoku Reader and Solver - Slides</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/*SHARED_CSS*/
+@page{size:1280px 720px;margin:0}
+html,body{height:100%;overflow:hidden}
+body{background:#03061a;font-size:22px}
+#viewport{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(900px 560px at 85% -10%,rgba(40,80,230,.35),transparent 62%),#03061a}
+#stage{position:relative;width:1280px;height:720px;transform-origin:center;flex:none}
+.slide{position:absolute;inset:0;padding:54px 70px 50px;display:flex;flex-direction:column;gap:20px;overflow:hidden;visibility:hidden;opacity:0;transition:opacity .55s ease,visibility 0s .55s;
+  background:radial-gradient(760px 480px at 92% -6%,rgba(40,80,230,.42),transparent 62%),radial-gradient(640px 480px at -6% 106%,rgba(10,75,216,.36),transparent 62%),linear-gradient(160deg,#060b28,#0a1130 60%,#05091f)}
+.slide.active{visibility:visible;opacity:1;transition:opacity .55s ease}
+.rv{opacity:0;transform:translateY(22px);transition:opacity .7s var(--ease),transform .8s var(--ease)}
+.slide.active .rv{opacity:1;transform:none;transition-delay:calc(var(--d,0)*100ms + 150ms)}
+.sh{display:flex;justify-content:space-between;font-size:14px;font-weight:700;letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
+.sh b{color:#fff}
+h1{font-size:62px;line-height:1.05;font-weight:800;letter-spacing:-.02em}
+h2{font-size:42px;font-weight:800;letter-spacing:-.015em;line-height:1.1}
+h2 em{font-style:normal;color:var(--cyan)}
+.lead{font-size:24px;color:#cfe1ff;line-height:1.45}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:34px;align-items:center;flex:1;min-height:0}
+.two.w{grid-template-columns:1.15fr 1fr}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.bul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:14px;font-size:24px;line-height:1.4;color:#e7eefb}
+.bul li{padding-left:30px;position:relative}
+.bul li::before{content:"";position:absolute;left:0;top:.55em;width:12px;height:12px;border-radius:4px;background:var(--blue);box-shadow:0 0 12px var(--blue)}
+.bul b{color:#fff}
+.glass{padding:20px 24px;border-radius:20px}
+.stat{padding:18px 22px;border-radius:18px}
+.stat small{display:block;color:var(--muted);font-size:15px;font-weight:600}.stat b{display:block;font-size:44px;line-height:1.1;font-weight:800;font-variant-numeric:tabular-nums}.stat i{display:block;font-style:normal;color:var(--green);font-size:15px;font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
+.tag{font-size:15px;padding:5px 14px}
+.eq{font-family:Consolas,'Cascadia Mono',monospace;font-size:24px;color:#bcd3ff;background:rgba(8,13,44,.85);border:1px solid var(--line);border-radius:14px;padding:12px 18px;text-align:center}
+pre{margin:0;font:19px/1.55 Consolas,'Cascadia Mono',monospace;color:#bcd3ff;background:rgba(4,8,31,.92);border:1px solid var(--line);border-radius:16px;padding:16px 20px;white-space:pre-wrap}
+th{font-size:13px;padding:8px 12px}td{font-size:19px;padding:9px 12px}
+.big{font-size:150px;font-weight:800;line-height:1;letter-spacing:-.03em;background:linear-gradient(135deg,#fff,var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+.note{border-left:4px solid var(--amber);background:rgba(255,181,71,.08);border-radius:0 14px 14px 0;padding:12px 18px;font-size:20px;color:#fde9c8}
+.foot{margin-top:auto;display:flex;justify-content:space-between;font-size:14px;color:var(--muted)}
+.cases3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;flex:1;min-height:0}
+.ccard{padding:16px;display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center}
+.ccard .bd{width:232px}.ccard b{font-size:20px}.ccard span{font-size:16px;color:var(--muted)}.ccard .logl{font-size:16px;color:#dfe7f5}.logl i{color:var(--red);font-style:normal;text-decoration:line-through}.logl em{color:var(--green);font-style:normal;font-weight:700}
+.chip{display:inline-block;font-size:14px;font-weight:700;padding:3px 12px;border-radius:99px;border:1px solid currentColor}
+.legend{font-size:15px}
+.step{display:flex;gap:14px;align-items:flex-start}.step .n{flex:none;width:38px;height:38px;border-radius:12px;background:var(--blue);display:grid;place-items:center;font-weight:800;box-shadow:0 0 16px rgba(0,117,255,.6)}
+.step div:last-child{font-size:21px;line-height:1.4;color:#e7eefb}
+.demo{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.demo .glass{display:flex;flex-direction:column;gap:8px}.demo b{font-size:23px}.demo span{font-size:18px;color:#cfe1ff}
+/* controls */
+#bar{position:fixed;left:0;bottom:0;height:4px;width:0;background:linear-gradient(90deg,var(--blue),var(--cyan));box-shadow:0 0 14px var(--cyan);transition:width .5s var(--ease);z-index:20}
+#hud{position:fixed;right:18px;bottom:14px;display:flex;gap:10px;align-items:center;font-size:13px;color:var(--muted);z-index:20;opacity:.75}
+#hud kbd{border:1px solid var(--line);border-radius:6px;padding:1px 7px;color:#cfe1ff;font:inherit}
+#notes{position:fixed;left:0;right:0;bottom:0;max-height:34vh;overflow:auto;background:rgba(3,6,26,.96);border-top:1px solid rgba(0,117,255,.5);padding:14px 28px 18px;z-index:30;display:none;font-size:17px;line-height:1.5;color:#dfe7f5}
+#notes.on{display:block}#notes b{color:var(--cyan)}
+body.print{overflow:visible;height:auto}
+body.print #viewport{position:static;display:block;background:none}
+body.print #stage{transform:none!important;width:auto;height:auto}
+body.print .slide{position:relative;width:1280px;height:720px;visibility:visible;opacity:1;break-after:page;page-break-after:always}
+body.print .rv{opacity:1;transform:none;transition:none}
+body.print #bar,body.print #hud,body.print #notes{display:none}
+@media print{html,body{height:auto;overflow:visible}}
+</style></head>
+<body>
+<div id="viewport"><div id="stage">
+
+<!-- 1 title -->
+<section class="slide" data-notes="<b>0:30</b> Introduce yourself and the project in one sentence: a neural network reads handwritten Sudoku digits, search fixes the misreads and a CSP solves the puzzle. Say that everything shown is produced by the code in the repository.">
+ <div class="two w" style="flex:1">
+  <div class="col">
+   <div class="rv" style="--d:0;font-size:16px;letter-spacing:.32em;font-weight:800;color:var(--cyan)">SEARCH + CSP + NEURAL NETWORK &nbsp;&middot;&nbsp; __CODE__</div>
+   <h1 class="rv" style="--d:1">Handwritten Sudoku<br>Reader and Solver</h1>
+   <p class="lead rv" style="--d:2;max-width:640px">A network reads the digits, search finds the cheapest corrections, a constraint solver solves the puzzle.</p>
+   <div class="rv" style="--d:3;display:flex;flex-direction:column;gap:2px;margin-top:10px"><b style="font-size:30px">__NAME__</b><span class="muted" style="font-size:20px">Student ID __ID__</span></div>
+   <div class="rv" style="--d:4;display:flex;gap:10px;flex-wrap:wrap"><span class="tag">MNIST</span><span class="tag">UCS &middot; Greedy &middot; A*</span><span class="tag">BT &middot; FC &middot; AC-3</span></div>
+  </div>
+  <div class="rv" style="--d:2;display:grid;place-items:center"><div class="glass" style="padding:16px;width:420px"><div id="s1board"></div></div></div>
+ </div>
+</section>
+
+<!-- 2 problem -->
+<section class="slide" data-notes="<b>1:00</b> One wrong digit breaks the whole puzzle. Even at 97.8% accuracy, if errors were independent, about half of 30-given puzzles would contain a misread (0.978^30 = 0.51). The network alone is not enough, and a solver alone cannot read.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>The problem</span></div>
+ <h2 class="rv" style="--d:0">One misread digit breaks <em>the whole puzzle</em></h2>
+ <div class="two">
+  <div class="col">
+   <ul class="bul">
+    <li class="rv" style="--d:1">The network is right <b>{{acc_mlp}}%</b> of the time per digit.</li>
+    <li class="rv" style="--d:2">A puzzle has about <b>30</b> digits, and <b>all</b> of them must be right.</li>
+    <li class="rv" style="--d:3">If errors were independent, <b>about half</b> of the puzzles would contain a misread (0.978<sup>30</sup> &asymp; 0.51).</li>
+    <li class="rv" style="--d:4">The solver then says <b>&ldquo;no solution&rdquo;</b> and gives no hint where the error is.</li>
+   </ul>
+   <div class="note rv" style="--d:5">Goal: find the <b>least unlikely</b> corrections that make the puzzle solvable again.</div>
+  </div>
+  <div class="rv" style="--d:2;display:grid;place-items:center"><div class="glass" style="padding:16px;width:400px"><div id="s2board"></div></div></div>
+ </div>
+ <div class="foot"><span>__NAME__ &middot; ID __ID__</span><span>2 / 15</span></div>
+</section>
+
+<!-- 3 architecture -->
+<section class="slide" data-notes="<b>1:00</b> Walk the pipeline left to right. The network gives probabilities, AC-3 detects that the reading is inconsistent, the search proposes corrections ordered by cost, the CSP tests each. If the CSP fails the search continues. If nothing works the system says unreadable and lists the least confident cells.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>Idea</span></div>
+ <h2 class="rv" style="--d:0">Three AI parts, <em>one loop</em></h2>
+ <div class="rv" style="--d:1;flex:1;display:grid;place-items:center"><svg id="arch" viewBox="0 0 680 190" style="width:100%;height:auto"></svg></div>
+ <div class="stats">
+  <div class="glass stat rv" style="--d:2"><small>Neural network</small><b style="font-size:26px">probabilities</b><span class="muted" style="font-size:15px">cost of a correction</span></div>
+  <div class="glass stat rv" style="--d:3"><small>Search</small><b style="font-size:26px">UCS &middot; Greedy &middot; A*</b><span class="muted" style="font-size:15px">cheapest correction set</span></div>
+  <div class="glass stat rv" style="--d:4"><small>CSP</small><b style="font-size:26px">BT + FC + AC-3</b><span class="muted" style="font-size:15px">goal test and solver</span></div>
+ </div>
+ <div class="foot"><span>__NAME__ &middot; ID __ID__</span><span>3 / 15</span></div>
+</section>
+
+<!-- 4 data -->
+<section class="slide" data-notes="<b>0:45</b> Real: MNIST digits, split 50k/10k as the brief asks, zero dropped. Generated: the Sudoku puzzles, the mosaics and the injected hard digits. Be explicit that the misreads are injected, not natural.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>Data</span></div>
+ <h2 class="rv" style="--d:0">Real digits, <em>generated puzzles</em></h2>
+ <div class="two">
+  <div class="col">
+   <div class="stats">
+    <div class="glass stat rv" style="--d:1"><small>Train</small><b>45,053</b></div>
+    <div class="glass stat rv" style="--d:2"><small>Validation</small><b>9,024</b></div>
+    <div class="glass stat rv" style="--d:3"><small>Test</small><b>9,020</b></div>
+   </div>
+   <ul class="bul">
+    <li class="rv" style="--d:3"><b>Real:</b> MNIST digits 1&ndash;9, seeded 50k / 10k split.</li>
+    <li class="rv" style="--d:4"><b>Generated:</b> unique-solution puzzles (25 / 30 / 35 givens) and 252&times;252 mosaics of real test digits.</li>
+    <li class="rv" style="--d:5"><b>Injected:</b> <i>k</i> hard digits (misread by the network, true digit ranked 2nd or 3rd), first reading kept only if unsolvable.</li>
+   </ul>
+  </div>
+  <div class="rv" style="--d:2;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:center">
+   <div><div class="glass" style="padding:12px"><div id="s4a"></div></div><div class="muted" style="font-size:15px;text-align:center;margin-top:6px">first reading</div></div>
+   <div><div class="glass" style="padding:12px"><div id="s4b"></div></div><div class="muted" style="font-size:15px;text-align:center;margin-top:6px">after correction</div></div>
+  </div>
+ </div>
+ <div class="foot"><span>__NAME__ &middot; ID __ID__</span><span>4 / 15</span></div>
+</section>
+
+<!-- 5 NN -->
+<section class="slide" data-notes="<b>0:45</b> A small MLP written in NumPy, trained in about 20 seconds on the CPU. It beats logistic regression by 5.5 points. Temperature scaling halves the calibration error, which matters because probabilities become costs: cost = log(p_read / p_new).">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>Neural network</span></div>
+ <h2 class="rv" style="--d:0">A calibrated digit reader in <em>NumPy</em></h2>
+ <div class="two">
+  <div class="col">
+   <div class="stats">
+    <div class="glass stat rv" style="--d:1"><small>MLP accuracy</small><b>{{acc_mlp}}%</b><i>+{{acc_gain}} pts vs logistic regression</i></div>
+    <div class="glass stat rv" style="--d:2"><small>Calibration error</small><b>{{ece_after}}</b><i>from {{ece_before}} (T = {{temp}})</i></div>
+   </div>
+   <ul class="bul" style="font-size:22px">
+    <li class="rv" style="--d:3">784 &rarr; 128 &rarr; 64 &rarr; 9, ReLU, Adam, 10 epochs, about 20 s on a CPU</li>
+    <li class="rv" style="--d:4">Probabilities become the <b>cost</b> of a correction:</li>
+   </ul>
+   <div class="eq rv" style="--d:5">cost(a &rarr; b) = log( p<sub>a</sub> / p<sub>b</sub> ) &ge; 0</div>
+  </div>
+  <div class="rv glass" style="--d:2;padding:14px;display:grid;place-items:center"><div id="cm" style="width:100%;max-width:430px"></div><div class="muted" style="font-size:15px">confusion matrix, test set</div></div>
+ </div>
+ <div class="foot"><span>__NAME__ &middot; ID __ID__</span><span>5 / 15</span></div>
+</section>
+
+<!-- 6 CSP -->
+<section class="slide" data-notes="<b>0:45</b> 81 variables, domains 1-9, all-different on rows columns and boxes. Three separate switches: backtracking, forward checking, AC-3, each with counters. On the classic puzzle the assignments drop from 4,208 to 516 to 51.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>Constraint satisfaction</span></div>
+ <h2 class="rv" style="--d:0">Backtracking, forward checking, <em>AC-3</em></h2>
+ <div class="two">
+  <div class="col">
+   <ul class="bul">
+    <li class="rv" style="--d:1">81 variables, domain 1&ndash;9, 27 all-different constraints</li>
+    <li class="rv" style="--d:2"><b>BT</b> assigns and undoes. <b>FC</b> removes the digit from the peers. <b>AC-3</b> prunes before the search and detects duplicate givens.</li>
+    <li class="rv" style="--d:3">Three separate switches, with counters: assignments, backtracks, revisions</li>
+   </ul>
+  </div>
+  <div class="rv glass" style="--d:2">
+   <div class="muted" style="font-size:15px;margin-bottom:8px">Classic 30-given puzzle, known answer</div>
+   <table><thead><tr><th>Method</th><th class="num">Assignments</th><th class="num">Backtracks</th></tr></thead><tbody>
+    <tr><td>BT</td><td class="num">4,208</td><td class="num">4,157</td></tr>
+    <tr><td>BT + FC</td><td class="num">516</td><td class="num">282</td></tr>
+    <tr><td>BT + AC-3</td><td class="num">51</td><td class="num">0</td></tr>
+    <tr><td>BT + FC + AC-3</td><td class="num">51</td><td class="num">0</td></tr></tbody></table>
+  </div>
+ </div>
+ <div class="foot"><span>__NAME__ &middot; ID __ID__</span><span>6 / 15</span></div>
+</section>
+
+<!-- 7 search -->
+<section class="slide" data-notes="<b>1:00</b> State = set of corrections. Cost = how much less likely the new digit is. Goal = solvable by the CSP. Only the 15 least confident cells with 2 alternatives each, so branching is at most 30. A* heuristic: every duplicate pair needs one cell changed, so h is the max over pairs of the cheapest change. It never overestimates.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>Search</span></div>
+ <h2 class="rv" style="--d:0">Search over <em>correction sets</em></h2>
+ <div class="two">
+  <div class="col">
+   <ul class="bul" style="font-size:22px">
+    <li class="rv" style="--d:1"><b>State:</b> a set of corrections {(cell, digit)}</li>
+    <li class="rv" style="--d:2"><b>Cost:</b> log(p<sub>read</sub> / p<sub>new</sub>), never negative</li>
+    <li class="rv" style="--d:3"><b>Goal:</b> the CSP solves the corrected puzzle</li>
+    <li class="rv" style="--d:4"><b>Branching:</b> 15 least-confident cells &times; 2 alternatives</li>
+   </ul>
+  </div>
+  <div class="col">
+   <div class="eq rv" style="--d:2;font-size:21px">h = max over conflicts (a, b) of min( m(a), m(b) )</div>
+   <p class="rv muted" style="--d:3;font-size:19px;line-height:1.45">Each duplicate pair needs one of its two cells changed, so the cheapest fix of the hardest conflict is a lower bound: <b style="color:#fff">h never overestimates</b>.</p>
+   <table class="rv" style="--d:4"><thead><tr><th>Algorithm</th><th>Priority</th><th>Optimal</th></tr></thead><tbody>
+    <tr><td><span class="dot" style="background:#3d8bff"></span>UCS</td><td>g</td><td class="ok">yes</td></tr>
+    <tr><td><span class="dot" style="background:#21d4fd"></span>Greedy</td><td>h</td><td class="warn">no</td></tr>
+    <tr><td><span class="dot" style="background:#a78bfa"></span>A*</td><td>g + h</td><td class="ok">yes</td></tr></tbody></table>
+  </div>
+ </div>
+ <div class="foot"><span>__NAME__ &middot; ID __ID__</span><span>7 / 15</span></div>
+</section>
+
+<!-- 8 integration -->
+<section class="slide" data-notes="<b>0:45</b> The loop in five lines. First reading solvable: return it, nothing to correct. Otherwise search proposes, CSP tests, first solvable wins. If nothing works: unreadable plus the least confident cells.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>Integration</span></div>
+ <h2 class="rv" style="--d:0">How the parts <em>cooperate</em></h2>
+ <div class="two w">
+  <pre class="rv" style="--d:1">read, p = network(image)
+if csp.solve(read).solved:
+    return solution              # nothing to correct
+for corrections in search(read, p, algo):
+    if csp.solve(apply(read, corrections)).solved:
+        return solution, corrections
+return "unreadable", least_confident_cells</pre>
+  <div class="col">
+   <div class="step rv" style="--d:2"><div class="n">1</div><div><b>Read</b> every cell, keep the probabilities</div></div>
+   <div class="step rv" style="--d:3"><div class="n">2</div><div><b>Check</b> with the CSP (AC-3 finds duplicates)</div></div>
+   <div class="step rv" style="--d:4"><div class="n">3</div><div><b>Correct</b> cheapest first, <b>test</b> each with the CSP</div></div>
+   <div class="step rv" style="--d:5"><div class="n">4</div><div><b>Report</b> the solution and the correction log</div></div>
+  </div>
+ </div>
+ <div class="foot"><span>__NAME__ &middot; ID __ID__</span><span>8 / 15</span></div>
+</section>
+
+<!-- 9 exp1 -->
+<section class="slide" data-notes="<b>1:00</b> 5 seeds, 20 puzzles each, so 100 per level. A* and UCS have identical recovery and CSP calls, but A* expands about 7 times fewer nodes at 3 misreads. Greedy expands the fewest nodes but makes about twice as many CSP calls and recovers slightly less.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>Experiment 1</span></div>
+ <h2 class="rv" style="--d:0">UCS vs Greedy vs A*: <em>same answer, fewer nodes</em></h2>
+ <div class="two" style="grid-template-columns:1fr 1fr 0.8fr;gap:22px;align-items:stretch">
+  <div class="glass rv" style="--d:1"><div class="muted" style="font-size:16px">Nodes expanded (log)</div><div class="legend" id="lg_a"></div><div class="chart" id="c_nodes"></div></div>
+  <div class="glass rv" style="--d:2"><div class="muted" style="font-size:16px">Exact recovery rate</div><div class="legend" id="lg_b"></div><div class="chart" id="c_rec"></div></div>
+  <div class="col" style="justify-content:center">
+   <div class="stat glass rv" style="--d:3"><small>Nodes at 3 misreads</small><b style="font-size:30px">{{exp_ucs_3}} / {{exp_astar_3}}</b><i style="color:var(--muted)">UCS / A*</i></div>
+   <div class="stat glass rv" style="--d:4"><small>CSP calls at 3 misreads</small><b style="font-size:30px">{{csp_ucs_3}} vs {{csp_greedy_3}}</b><i style="color:var(--muted)">optimal vs Greedy</i></div>
+  </div>
+ </div>
+ <div class="foot"><span>__NAME__ &middot; ID __ID__</span><span>9 / 15</span></div>
+</section>
+
+<!-- 10 exp2 -->
+<section class="slide" data-notes="<b>0:45</b> Static variable order to isolate the inference. At 30 givens FC cuts the assignments three-fold and AC-3 about seven-fold. On the sparse 25-given puzzles plain backtracking sometimes hits the 200,000 cap.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>Experiment 2</span></div>
+ <h2 class="rv" style="--d:0">Forward checking and AC-3 <em>cut the work</em></h2>
+ <div class="two w">
+  <div class="glass rv" style="--d:1"><div class="legend" id="lg_c"></div><div class="chart" id="c_csp"></div></div>
+  <div class="col">
+   <div class="stat glass rv" style="--d:2"><small>30 givens, assignments</small><b style="font-size:34px">{{asg30_bt}} &rarr; {{asg30_ac}}</b><i>&minus;{{red30}}% with FC + AC-3</i></div>
+   <div class="stat glass rv" style="--d:3"><small>25 givens, solved within the cap</small><b style="font-size:34px">{{solved25_bt}}% &rarr; {{solved25_ac}}%</b><i>BT &rarr; BT + FC + AC-3</i></div>
+   <p class="rv muted" style="--d:4;font-size:17px">5 seeds &times; 10 puzzles per level, static variable order, 200,000-assignment cap.</p>
+  </div>
+ </div>
+ <div class="foot"><span>__NAME__ &middot; ID __ID__</span><span>10 / 15</span></div>
+</section>
+
+<!-- 11 exp3 -->
+<section class="slide" data-notes="<b>0:45</b> Without correction the system never recovers a broken puzzle. Random correction only works for one misread. NN-guided correction recovers 96, 77 and 55 percent. The network's probabilities are what make the search effective.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>Experiment 3</span></div>
+ <h2 class="rv" style="--d:0">The network is what makes <em>the search work</em></h2>
+ <div class="two w">
+  <div class="glass rv" style="--d:1"><div class="legend" id="lg_d"></div><div class="chart" id="c_nn"></div></div>
+  <div class="col">
+   <div class="stats" style="grid-template-columns:1fr 1fr">
+    <div class="stat glass rv" style="--d:2"><small>1 misread</small><b>{{x1_nn}}</b><i>random {{x1_rand}}</i></div>
+    <div class="stat glass rv" style="--d:3"><small>3 misreads</small><b>{{x3_nn}}</b><i>random {{x3_rand}}</i></div>
+   </div>
+   <ul class="bul" style="font-size:21px"><li class="rv" style="--d:4">No correction: <b>{{x1_none}}</b> for 1&ndash;3 misreads</li><li class="rv" style="--d:5">Random corrections barely help</li></ul>
+  </div>
+ </div>
+ <div class="foot"><span>__NAME__ &middot; ID __ID__</span><span>11 / 15</span></div>
+</section>
+
+<!-- 12 cases -->
+<section class="slide" data-notes="<b>0:45</b> Real runs of the pipeline with fixed seeds. Red struck-through digits are the misreads, green are the corrections. The amber case is the main limitation: a cheaper wrong correction also made the puzzle solvable.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>Corrected cases</span></div>
+ <h2 class="rv" style="--d:0">Real runs, <em>real digits</em></h2>
+ <div class="cases3" id="s12"></div>
+ <div class="foot"><span>__NAME__ &middot; ID __ID__</span><span>12 / 15</span></div>
+</section>
+
+<!-- 13 demo -->
+<section class="slide" data-notes="<b>5:00 live demo.</b> Run python run_demo.py --seed 3 --misreads 2 (or press Run in the desktop app). Show 1) the search trace: UCS expansions in cost order, 2) the CSP pruning with and without FC and AC-3: BT 8,244 assignments, BT+FC 2,290, BT+FC+AC-3 51, 3) the system with the network-guided correction on versus off: off says 'no solution', on recovers the puzzle. Then open the dashboard and the corrected cases.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>Live demo &middot; 5 min</span></div>
+ <h2 class="rv" style="--d:0">Live <em>demo</em></h2>
+ <pre class="rv" style="--d:1;font-size:21px">python run_demo.py --seed 3 --misreads 2        # or press Run in SudokuReader.exe</pre>
+ <div class="demo">
+  <div class="glass rv" style="--d:2"><div class="step"><div class="n">1</div><b>Search trace</b></div><span>UCS expands correction sets in cost order until the CSP accepts one.</span></div>
+  <div class="glass rv" style="--d:3"><div class="step"><div class="n">2</div><b>CSP pruning</b></div><span>Same puzzle with BT, BT + FC and BT + FC + AC-3: assignments 8,244 &rarr; 2,290 &rarr; 51.</span></div>
+  <div class="glass rv" style="--d:4"><div class="step"><div class="n">3</div><b>Correction off vs on</b></div><span>Off: &ldquo;no solution&rdquo;. On: the exact puzzle is recovered.</span></div>
+ </div>
+ <div class="note rv" style="--d:5;border-color:var(--cyan);background:rgba(33,212,253,.08);color:#d6f6ff">Then: the dashboard (intro, corrected cases, charts) opens in the browser.</div>
+ <div class="foot"><span>__NAME__ &middot; ID __ID__</span><span>13 / 15</span></div>
+</section>
+
+<!-- 14 limits + conclusion -->
+<section class="slide" data-notes="<b>0:45</b> Be honest about the limits: injected misreads, clean MNIST digits, and the goal 'solvable' accepts the cheapest solvable puzzle, not always the written one. The unique-solution goal raised recovery from 72% to 88% in a diagnostic run. Conclude: probabilities, search and constraints compensate for each other.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>Limits and conclusions</span></div>
+ <h2 class="rv" style="--d:0">What works, and <em>what does not yet</em></h2>
+ <div class="two" style="align-items:start">
+  <div class="glass col rv" style="--d:1"><b style="font-size:24px;color:var(--green)">Conclusions</b>
+   <ul class="bul" style="font-size:21px">
+    <li>Recovery {{x1_nn}} / {{x2_nn}} / {{x3_nn}} for 1 / 2 / 3 misreads, {{x1_none}} without correction</li>
+    <li>A* = UCS quality with far fewer nodes</li>
+    <li>FC + AC-3 cut CSP work by up to {{red30}}%</li></ul></div>
+  <div class="glass col rv" style="--d:2"><b style="font-size:24px;color:var(--amber)">Limitations</b>
+   <ul class="bul" style="font-size:21px">
+    <li>Misreads are injected; MNIST digits are cleaner than real handwriting</li>
+    <li>&ldquo;Solvable&rdquo; accepts a cheaper wrong puzzle (the unique-solution goal helps: 72% &rarr; 88% in a diagnostic run)</li>
+    <li>5 seeds &times; 20 puzzles: large variance</li></ul></div>
+ </div>
+ <div class="foot"><span>__NAME__ &middot; ID __ID__</span><span>14 / 15</span></div>
+</section>
+
+<!-- 15 thanks -->
+<section class="slide" style="justify-content:center;align-items:flex-start" data-notes="<b>Questions.</b> Be ready for: why are probabilities used as costs, why is h admissible, why static variable order in Experiment 2, how the misreads are injected, what the unique-solution goal changes.">
+ <div class="rv" style="--d:0;font-size:16px;letter-spacing:.32em;font-weight:800;color:var(--cyan)">THANK YOU</div>
+ <h1 class="rv" style="--d:1">Questions?</h1>
+ <div class="rv" style="--d:2;display:flex;flex-direction:column;gap:4px"><b style="font-size:32px">__NAME__</b><span class="muted" style="font-size:22px">Student ID __ID__ &middot; Project __CODE__: __PROJECT__</span></div>
+ <div class="rv" style="--d:3;display:flex;gap:10px;flex-wrap:wrap;margin-top:8px"><span class="tag">Code, report and dashboard in the repository</span><span class="tag">python run_demo.py</span></div>
+</section>
+
+</div></div>
+<div id="bar"></div>
+<div id="hud"><kbd>&larr;</kbd><kbd>&rarr;</kbd> navigate &nbsp; <kbd>N</kbd> notes &nbsp; <kbd>F</kbd> fullscreen</div>
+<div id="notes"></div>
+
+<script>
+const D=/*DATA*/null;
+/*SHARED_JS*/
+const C=D.cases,slides=[...document.querySelectorAll('.slide')];
+/* diagrams */
+(function(){const s=$('arch'),defs=el('defs',{},s);
+ const g=el('linearGradient',{id:'ag',x1:0,y1:0,x2:1,y2:1},defs);el('stop',{offset:0,'stop-color':'#0075ff'},g);el('stop',{offset:1,'stop-color':'#21d4fd'},g);
+ const mk=el('marker',{id:'ar',viewBox:'0 0 10 10',refX:8,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'},defs);el('path',{d:'M0 0L10 5L0 10z',fill:'#8fb4ff'},mk);
+ const bx=[['Handwritten mosaic','9 x 9 digit images',20],['Neural network','digit probabilities',150],['AC-3 check','duplicate givens?',280],['Search','UCS / Greedy / A*',410],['CSP solver','BT + FC + AC-3',540]];
+ bx.forEach(([a,b,x],i)=>{el('rect',{x,y:50,width:120,height:62,rx:14,fill:'rgba(15,24,70,.9)',stroke:i==3?'#a78bfa':i==4?'#01b574':'url(#ag)','stroke-width':1.6},s);
+  let t=el('text',{x:x+60,y:76,'text-anchor':'middle',fill:'#fff','font-size':12,'font-weight':700},s);t.textContent=a;
+  t=el('text',{x:x+60,y:95,'text-anchor':'middle',fill:'#a0aec0','font-size':10},s);t.textContent=b;
+  if(i<4)el('path',{d:`M${x+122} 81H${x+148}`,stroke:'#8fb4ff','stroke-width':1.6,fill:'none','marker-end':'url(#ar)'},s)});
+ el('path',{d:'M600 114V160H470V114',stroke:'#f0605d','stroke-width':1.6,fill:'none','stroke-dasharray':'5 4','marker-end':'url(#ar)'},s);
+ let t=el('text',{x:535,y:176,'text-anchor':'middle',fill:'#f0605d','font-size':10.5,'font-weight':700},s);t.textContent='CSP fails: try the next cheapest corrections';
+ t=el('text',{x:340,y:136,'text-anchor':'middle',fill:'#a0aec0','font-size':10},s);t.textContent='solvable: done';
+ el('path',{d:'M340 114V126',stroke:'#01b574','stroke-width':1.4,fill:'none'},s);
+ t=el('text',{x:340,y:30,'text-anchor':'middle',fill:'#01b574','font-size':11,'font-weight':700},s);t.textContent='solution + correction log, or "unreadable" with the least confident cells';
+ el('path',{d:'M600 46V36H345',stroke:'#01b574','stroke-width':1.4,fill:'none','marker-end':'url(#ar)'},s)})();
+const e=C[2]||C[0];
+board($('s1board'),e.read,e.final,'fixed');board($('s2board'),e.read,e.final,'read');board($('s4a'),e.read,e.final,'read');board($('s4b'),e.read,e.final,'fixed');
+function boot(){
+ chartNodes('c_nodes',330);chartRecovery('c_rec',330);chartCsp('c_csp',330);chartNN('c_nn',330);
+ legendTo('lg_a',SER(REC).map(s=>[s.n,s.c]));legendTo('lg_b',SER(REC).map(s=>[s.n,s.c]));
+ const nm2=['BT','BT+FC','BT+FC+AC-3'],nm3=['NN-guided (UCS)','no correction','random correction'];
+ legendTo('lg_c',nm2.map((n,i)=>[n,COL[i]]));legendTo('lg_d',nm3.map((n,i)=>[n,COL[i]]));
+ confusion($('cm'),D.nn.mlp.confusion_matrix);
+ const pick=[C.findIndex(c=>c.exact&&c.misreads===1),C.findIndex(c=>c.exact&&c.misreads>=2),C.findIndex(c=>!c.exact)],idx=[...new Set(pick.filter(i=>i>=0))];
+ [...C.keys()].forEach(i=>{if(idx.length<3&&!idx.includes(i))idx.push(i)});
+ idx.slice(0,3).forEach((i,j)=>{const c=C[i],card=div('glass ccard rv',$('s12'));card.style.setProperty('--d',j+1);
+  const b=div('bd',card);board(b,c.read,c.final,'fixed');
+  const kind=c.exact?['ok','Exact solution recovered']:c.status==='solved'?['warn','Valid, but a different puzzle']:['badc','Unreadable'];
+  const log=c.corrections.map(w=>`<div class="logl">row ${Math.floor(w[0]/9)+1}, col ${w[0]%9+1}: <i>${w[1]}</i> &rarr; <em>${w[2]}</em></div>`).join('');
+  card.insertAdjacentHTML('beforeend',`<b>Case ${i+1} &middot; ${c.misreads} misread${c.misreads==1?'':'s'}</b><span class="chip ${kind[0]}">${kind[1]}</span><span>cost ${c.cost.toFixed(2)} &middot; ${c.expanded} expanded</span>${log}`)});
+}
+/* navigation */
+let cur=0;const bar=$('bar'),notes=$('notes'),stage=$('stage'),print=location.search.includes('print')||/[?&]s=\d+/.test(location.search);
+function fit(){const k=Math.min(innerWidth/1280,innerHeight/720);stage.style.transform=`scale(${k})`}
+function go(n){cur=Math.max(0,Math.min(slides.length-1,n));slides.forEach((s,i)=>s.classList.toggle('active',i===cur));
+ bar.style.width=((cur+1)/slides.length*100)+'%';notes.innerHTML='<b>Slide '+(cur+1)+' of '+slides.length+'</b> &nbsp; '+(slides[cur].dataset.notes||'');
+ history.replaceState(null,'','#'+(cur+1))}
+addEventListener('keydown',ev=>{const k=ev.key;
+ if(['ArrowRight','PageDown',' ','Enter'].includes(k)){ev.preventDefault();go(cur+1)}
+ else if(['ArrowLeft','PageUp','Backspace'].includes(k)){ev.preventDefault();go(cur-1)}
+ else if(k==='Home')go(0);else if(k==='End')go(slides.length-1);
+ else if(k==='n'||k==='N')notes.classList.toggle('on');
+ else if(k==='f'||k==='F'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()}});
+addEventListener('click',ev=>{if(ev.target.closest('#notes'))return;go(ev.clientX<innerWidth*.3?cur-1:cur+1)});
+addEventListener('resize',fit);
+if(print){document.body.classList.add('print');const so=(location.search.match(/[?&]s=(\d+)/)||[])[1];slides.forEach((s,i)=>{if(so&&i!==so-1)s.style.display='none';else s.classList.add('active')})}
+else{fit();go((parseInt(location.hash.slice(1))||1)-1)}
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(boot);else boot();
+</script>
+</body></html>

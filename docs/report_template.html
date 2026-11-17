@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Handwritten Sudoku Reader and Solver - Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/*SHARED_CSS*/
+@page{size:A4;margin:0}
+body{background:#03061a}
+.page{width:210mm;height:297mm;margin:0 auto 14px;padding:13mm 15mm 11mm;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:9px;
+  background:radial-gradient(520px 340px at 92% -4%,rgba(40,80,230,.40),transparent 62%),radial-gradient(460px 360px at -6% 104%,rgba(10,75,216,.34),transparent 62%),linear-gradient(160deg,#060b28,#0a1130 60%,#05091f);break-after:page;page-break-after:always}
+.rh{display:flex;justify-content:space-between;font-size:9.5px;font-weight:700;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;padding-bottom:7px;border-bottom:1px solid var(--line)}
+.rh b{color:#fff}
+.rf{margin-top:auto;display:flex;justify-content:space-between;font-size:10px;color:var(--muted);padding-top:7px;border-top:1px solid var(--line)}
+.body{display:flex;flex-direction:column;gap:9px;min-height:0}
+h2{font-size:19px;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
+h2 .idx{flex:none;width:26px;height:26px;border-radius:8px;background:var(--blue);display:grid;place-items:center;font-size:13px;box-shadow:0 0 14px rgba(0,117,255,.6)}
+h3{font-size:12.5px;font-weight:700;color:#cfe1ff;margin-top:3px}
+p{font-size:11.6px;color:#dfe7f5;text-align:justify;hyphens:auto}
+ul,ol{margin:0;padding-left:17px;font-size:11.6px;color:#dfe7f5;display:flex;flex-direction:column;gap:3px}
+.glass{padding:10px 12px}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.kpi{padding:8px 10px}.kpi small{display:block;color:var(--muted);font-size:9.5px;font-weight:600}.kpi b{display:block;font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.25;margin-top:2px}.kpi i{display:block;margin-top:2px;font-style:normal;font-size:9.5px;color:var(--green);font-weight:700}
+figure{margin:0;display:flex;flex-direction:column;gap:4px}
+figcaption{font-size:10px;color:var(--muted);line-height:1.4}figcaption b{color:#cfe1ff}
+.note{border-left:3px solid var(--blue);padding:6px 10px;background:rgba(0,117,255,.08);border-radius:0 10px 10px 0;font-size:11.2px;color:#dfe7f5}
+.note.w{border-color:var(--amber);background:rgba(255,181,71,.08)}
+.eq{font-family:Consolas,'Cascadia Mono',monospace;font-size:11.2px;color:#bcd3ff;background:rgba(8,13,44,.8);border:1px solid var(--line);border-radius:10px;padding:6px 10px;text-align:center}
+pre{margin:0;font:11px/1.5 Consolas,'Cascadia Mono',monospace;color:#bcd3ff;background:rgba(4,8,31,.9);border:1px solid var(--line);border-radius:10px;padding:8px 11px;white-space:pre-wrap}
+.cover{justify-content:center;gap:16px}
+.cover .big{font-size:40px;line-height:1.08;font-weight:800;letter-spacing:-.02em}
+.cover .lab{font-size:11px;letter-spacing:.32em;font-weight:800;color:var(--cyan)}
+.cover .who{display:flex;flex-direction:column;gap:3px;margin-top:6px}
+.cover .who b{font-size:19px}
+.cover .bd{width:300px;margin:6px auto 0}
+.arch{width:100%;height:auto}
+.refs{font-size:10.6px;color:#c6d2e6;gap:4px}
+.case{padding:9px 11px;display:grid;grid-template-columns:172px 1fr;gap:12px;align-items:center}
+.case .meta{display:flex;flex-direction:column;gap:4px;font-size:11px}
+.case .meta b{font-size:13px}
+.logl{font-size:10.8px;color:#dfe7f5}.logl i{color:var(--red);font-style:normal;text-decoration:line-through}.logl em{color:var(--green);font-style:normal;font-weight:700}
+.chip{display:inline-block;font-size:10px;font-weight:700;padding:2px 9px;border-radius:99px;border:1px solid currentColor}
+@media screen{body{padding:14px 0}}
+@media print{.page{margin:0}body{padding:0}}
+body.only .page{display:none}body.only .page.on{display:flex}
+</style></head>
+<body>
+
+<!-- ============ 1 cover ============ -->
+<section class="page cover" id="p1">
+ <div class="lab">SEARCH + CSP + NEURAL NETWORK &nbsp;&middot;&nbsp; PROJECT __CODE__</div>
+ <div class="big">Handwritten Sudoku<br>Reader and Solver</div>
+ <p style="max-width:140mm;font-size:13px;color:#cfe1ff;text-align:left">A neural network reads a handwritten Sudoku, uniform-cost, greedy and A* search find the cheapest digit corrections, and a constraint-satisfaction solver (backtracking, forward checking, AC-3) solves the puzzle.</p>
+ <div class="glass bd" id="coverBoard" style="padding:12px;width:310px"></div>
+ <div class="who"><b>__NAME__</b><span class="muted">Student ID __ID__</span><span class="muted">Project report &middot; November 2026</span></div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="tag">MNIST</span><span class="tag">UCS &middot; Greedy &middot; A*</span><span class="tag">Backtracking &middot; FC &middot; AC-3</span><span class="tag">MLP (NumPy)</span></div>
+</section>
+
+<!-- ============ 2 abstract ============ -->
+<section class="page" id="p2">
+ <header class="rh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>__PROJECT__</span></header>
+ <div class="body">
+  <h2><span class="idx">1</span>Abstract and system overview</h2>
+  <p>Reading a Sudoku from handwriting fails in a very specific way: one misread digit usually makes the whole puzzle unsolvable, even though the network is right about 98% of the time. We exploit the structure of the problem. A neural network reads the grid and gives a probability for every digit; a constraint solver tells us whether the reading is consistent; and a search procedure looks for the <b>least unlikely</b> set of corrections (cost = how much less likely the new digit is) that makes the puzzle solvable. The three components cooperate in one loop, and when nothing works the system reports that the puzzle is <i>unreadable</i> and lists the least confident cells.</p>
+  <figure>
+   <svg class="arch" viewBox="0 0 680 190" id="arch"></svg>
+   <figcaption><b>Figure 1.</b> The integrated pipeline. The search proposes a set of corrections, the CSP tests it, and the next cheapest set is tried when the CSP fails.</figcaption>
+  </figure>
+  <h3>Headline results (mean over 5 seeds)</h3>
+  <div class="kpis">
+   <div class="glass kpi"><small>Digit accuracy (test)</small><b>{{acc_mlp}}%</b><i>+{{acc_gain}} pts vs logistic regression</i></div>
+   <div class="glass kpi"><small>Calibration error (ECE)</small><b>{{ece_after}}</b><i>from {{ece_before}} before scaling</i></div>
+   <div class="glass kpi"><small>Exact recovery, 1 / 2 / 3 misreads</small><b>{{x1_nn}} / {{x2_nn}} / {{x3_nn}}</b><i>no correction: {{x1_none}}</i></div>
+   <div class="glass kpi"><small>CSP assignments, 30 givens</small><b>&minus;{{red30}}%</b><i>FC + AC-3 vs plain backtracking</i></div>
+  </div>
+  <h3>What was built</h3>
+  <ul>
+   <li><b>Data pipeline</b>: reproducible MNIST preprocessing, a seeded Sudoku and handwritten-mosaic generator, and a documented rule for injecting hard digits.</li>
+   <li><b>Neural network</b>: a 784-128-64-9 MLP written in NumPy with temperature-scaled probabilities, compared with logistic regression.</li>
+   <li><b>CSP</b>: backtracking, forward checking and AC-3 as three separately switchable parts with counters (assignments, backtracks, revisions).</li>
+   <li><b>Search</b>: UCS, Greedy best-first and A* with an admissible heuristic over correction sets, with counters (expanded, generated, CSP calls).</li>
+   <li><b>Evaluation and tooling</b>: 19 automated tests, three experiments with 5 seeds, an interactive dashboard and a desktop launcher.</li>
+  </ul>
+  <div class="note">All numbers in this report are produced by the code in the repository; the figures are drawn from the same result tables that feed the dashboard.</div>
+ </div>
+ <footer class="rf"><span>__NAME__ &middot; ID __ID__</span><span>2 / 12</span></footer>
+</section>
+
+<!-- ============ 3 data ============ -->
+<section class="page" id="p3">
+ <header class="rh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>__PROJECT__</span></header>
+ <div class="body">
+  <h2><span class="idx">2</span>Data</h2>
+  <h3>2.1 Real data: MNIST</h3>
+  <p>The classifier is trained on the MNIST database of handwritten digits (60,000 training and 10,000 test images, 28&times;28 pixels, training and test writers are different people). The four gzip files are fetched by <code>data/make_data.py</code> and a fixed seed makes the preprocessing reproducible. As the project asks, the 60,000 training images are split 50,000 / 10,000 (train / validation) with a seeded permutation, scaled to 0&ndash;1, and the digit 0 is dropped because Sudoku only uses 1&ndash;9. The official test set is never used for training or model selection, and the mosaics below are built from test images only, so the network has never seen the digits it must read.</p>
+  <div class="cols3">
+   <div class="glass kpi"><small>Train</small><b>45,053</b><i>fits the networks</i></div>
+   <div class="glass kpi"><small>Validation</small><b>9,024</b><i>temperature scaling</i></div>
+   <div class="glass kpi"><small>Test (untouched)</small><b>9,020</b><i>accuracy and the mosaics</i></div>
+  </div>
+  <h3>2.2 Generated data: puzzles and handwritten mosaics</h3>
+  <p>There is no real handwritten-Sudoku dataset in the project, so the puzzles are generated with a seeded random generator (<code>data/generator.py</code>). A full grid is built by randomised backtracking (MRV cell order, shuffled digits). Cells are then removed in random order, keeping a cell removed only if the CSP still finds exactly one solution, until the wanted number of givens (25, 30 or 35) is reached. Each given is replaced by a random real MNIST test image of that digit and each empty cell by dark Gaussian noise (&sigma; = 0.02), giving a 252&times;252 mosaic. Empty cells are detected by a brightness rule (brightest pixel &lt; 0.5), not by the network.</p>
+  <h3>2.3 Injecting hard digits</h3>
+  <p>A well-trained network is almost always right, so on its own there would be nothing to correct. For a level of <i>k</i> misreads we replace <i>k</i> given cells by a <b>hard digit</b>: a test image of the same true digit that the network misreads, and for which the true digit is ranked second or third. For <i>k</i> &ge; 1 the draw is repeated (at most 30 times) until the first reading is unsolvable, so that every instance really is broken.</p>
+  <div class="cols2">
+   <figure><div id="ex_read" style="width:100%;max-width:185px;margin:0 auto"></div><figcaption><b>Figure 2a.</b> First reading of a mosaic: the two injected misreads are shown in red.</figcaption></figure>
+   <figure><div id="ex_fix" style="width:100%;max-width:185px;margin:0 auto"></div><figcaption><b>Figure 2b.</b> After correction and solving: corrected cells are green with the misread digit struck through.</figcaption></figure>
+  </div>
+  <table><thead><tr><th>Item</th><th>Real or generated</th><th>How</th></tr></thead><tbody>
+   <tr><td>Digit images, labels</td><td class="ok">real</td><td>MNIST</td></tr>
+   <tr><td>Sudoku solutions and puzzles</td><td class="warn">generated</td><td>randomised backtracking + uniqueness check</td></tr>
+   <tr><td>Mosaics, blank cells</td><td class="warn">generated</td><td>real digit images + Gaussian noise</td></tr>
+   <tr><td>Injected misreads</td><td class="warn">generated</td><td>hard-digit rule above</td></tr></tbody></table>
+  <div class="note w">This is not photographed real-world Sudoku: only the digit images are real, and the misreads are injected, not natural.</div>
+ </div>
+ <footer class="rf"><span>__NAME__ &middot; ID __ID__</span><span>3 / 12</span></footer>
+</section>
+
+<!-- ============ 4 neural network ============ -->
+<section class="page" id="p4">
+ <header class="rh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>__PROJECT__</span></header>
+ <div class="body">
+  <h2><span class="idx">3</span>Neural network</h2>
+  <p>The network classifies one 28&times;28 cell image into a digit 1&ndash;9 and returns the full probability vector, because the search needs the probabilities, not only the arg-max. To keep the whole project light on the CPU the network is implemented in NumPy (<code>nn/mlp.py</code>, about 120 lines) and trains in roughly 20 seconds without a GPU.</p>
+  <div class="cols2">
+   <div class="glass"><h3 style="margin-top:0">Architecture and training</h3>
+    <ul><li>784 &rarr; 128 &rarr; 64 &rarr; 9, ReLU, softmax, He initialisation</li>
+     <li>Cross-entropy loss, Adam (&beta;<sub>1</sub>=0.9, &beta;<sub>2</sub>=0.999), learning rate 10<sup>&minus;3</sup></li>
+     <li>Mini-batches of 128, 10 epochs, seed 0</li>
+     <li>Baseline: multinomial logistic regression (784 &rarr; 9) with the same trainer</li></ul></div>
+   <div class="glass"><h3 style="margin-top:0">Temperature scaling</h3>
+    <p style="text-align:left">Probabilities are divided by a temperature <i>T</i> before the softmax. <i>T</i> is picked on the validation set by minimising the negative log-likelihood over a grid from 0.5 to 4.0, giving <b>T = {{temp}}</b>. This does not change the arg-max, so accuracy stays the same while the probabilities become better calibrated.</p></div>
+  </div>
+  <h3>Results on the untouched test set</h3>
+  <table><thead><tr><th>Model</th><th class="num">Accuracy</th><th class="num">Expected calibration error</th></tr></thead><tbody>
+   <tr><td><span class="dot" style="background:#a0aec0"></span>Logistic regression (baseline)</td><td class="num">{{acc_lr}}%</td><td class="num">{{ece_lr}}</td></tr>
+   <tr><td><span class="dot" style="background:#3d8bff"></span>MLP, raw probabilities</td><td class="num">{{acc_mlp}}%</td><td class="num">{{ece_before}}</td></tr>
+   <tr><td><span class="dot" style="background:#01b574"></span>MLP + temperature scaling</td><td class="num">{{acc_mlp}}%</td><td class="num">{{ece_after}}</td></tr></tbody></table>
+  <p>The MLP beats the linear baseline by {{acc_gain}} percentage points. Calibration is measured with the expected calibration error (15 equal-width confidence bins); temperature scaling roughly halves it.</p>
+  <div class="cols2">
+   <figure><div id="cm" style="width:100%;max-width:280px;margin:0 auto"></div><figcaption><b>Figure 3.</b> Confusion matrix of the MLP on the test set (green: correct, red: errors). The visible confusions (for example 4 &harr; 9 and 3 &harr; 5) are the ones that create misreads.</figcaption></figure>
+   <div class="glass"><h3 style="margin-top:0">Why calibration matters here</h3>
+    <p style="text-align:left">The probability vector becomes the <b>cost of a correction</b>. For a cell read as digit <i>a</i> and changed to <i>b</i>:</p>
+    <div class="eq">cost(a &rarr; b) = log( p<sub>a</sub> / p<sub>b</sub> ) &ge; 0</div>
+    <p style="text-align:left;margin-top:6px">It is never negative because <i>a</i> is the arg-max, and it is small when the network was nearly as sure about <i>b</i>. A poorly calibrated network would make the cheapest correction the wrong one.</p></div>
+  </div>
+ </div>
+ <footer class="rf"><span>__NAME__ &middot; ID __ID__</span><span>4 / 12</span></footer>
+</section>
+
+<!-- ============ 5 CSP ============ -->
+<section class="page" id="p5">
+ <header class="rh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>__PROJECT__</span></header>
+ <div class="body">
+  <h2><span class="idx">4</span>Constraint satisfaction</h2>
+  <div class="cols2">
+   <div class="glass"><h3 style="margin-top:0">Formulation</h3>
+    <ul><li><b>Variables</b>: the 81 cells.</li><li><b>Domains</b>: digits 1&ndash;9; a given cell has a single-value domain.</li>
+     <li><b>Constraints</b>: 27 all-different constraints (9 rows, 9 columns, 9 boxes), modelled as binary &ldquo;not equal&rdquo; constraints between each cell and its 20 peers.</li>
+     <li><b>Representation</b>: a domain is an integer bit-mask, so removing a value is one AND and the domain size is a population count.</li></ul></div>
+   <div class="glass"><h3 style="margin-top:0">Switchable parts</h3>
+    <table><thead><tr><th>Part</th><th>What it does</th></tr></thead><tbody>
+     <tr><td>Backtracking</td><td>depth-first assignment, undo on failure</td></tr>
+     <tr><td>Forward checking</td><td>after each assignment remove the digit from the peers' domains; fail on an empty domain</td></tr>
+     <tr><td>AC-3</td><td>run once before the search; detects conflicts (two equal givens empty a domain) and shrinks domains</td></tr></tbody></table></div>
+  </div>
+  <p>The three parts are separate switches of <code>csp.sudoku.solve(grid, fc, ac3_on, mrv, limit, max_assignments)</code>, so any combination can be measured. Variable ordering is static by default in the experiments (so the effect of the inference is not hidden by a strong heuristic) and MRV is used inside the integrated system. Asking for <code>limit = 2</code> solutions gives a uniqueness test, which the generator and the optional &ldquo;exactly one solution&rdquo; goal use.</p>
+  <h3>Counters</h3>
+  <p>Every run returns <b>assignments</b> (values tried), <b>backtracks</b> (variables whose values were all exhausted), <b>AC-3 revisions</b> (arc revisions) and <b>pruned</b> values. A cap on assignments protects the experiments from the very hard cases of plain backtracking.</p>
+  <h3>Worked example with a known answer</h3>
+  <p>The classic 30-given puzzle (unit-tested against its published solution) is solved by all four combinations, with a static variable order:</p>
+  <table><thead><tr><th>Method</th><th class="num">Assignments</th><th class="num">Backtracks</th><th class="num">Values pruned</th></tr></thead><tbody>
+   <tr><td>BT</td><td class="num">4,208</td><td class="num">4,157</td><td class="num">0</td></tr>
+   <tr><td>BT + FC</td><td class="num">516</td><td class="num">282</td><td class="num">1,717</td></tr>
+   <tr><td>BT + AC-3</td><td class="num">51</td><td class="num">0</td><td class="num">408</td></tr>
+   <tr><td>BT + FC + AC-3</td><td class="num">51</td><td class="num">0</td><td class="num">408</td></tr></tbody></table>
+  <div class="note">On this puzzle AC-3 alone already propagates the givens so far that the search needs no backtracking; FC adds nothing once AC-3 has run, which is why Experiment 2 uses harder, sparser puzzles.</div>
+  <h3>Impossible inputs</h3>
+  <p>Two equal givens in a unit, or a cell with no legal digit, give the explicit message <i>&ldquo;no solution: &hellip;&rdquo;</i> (AC-3 empties a domain, or the search is exhausted). Both cases are covered by unit tests.</p>
+ </div>
+ <footer class="rf"><span>__NAME__ &middot; ID __ID__</span><span>5 / 12</span></footer>
+</section>
+
+<!-- ============ 6 search ============ -->
+<section class="page" id="p6">
+ <header class="rh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>__PROJECT__</span></header>
+ <div class="body">
+  <h2><span class="idx">5</span>Search over corrections</h2>
+  <div class="cols2">
+   <div class="glass"><h3 style="margin-top:0">Problem definition</h3>
+    <ul><li><b>State</b>: a set of corrections {(cell, new digit)} applied to the first reading; each cell is corrected at most once.</li>
+     <li><b>Actions</b>: correct one more uncertain cell to one of its top alternatives.</li>
+     <li><b>Step cost</b>: log(p<sub>read</sub>/p<sub>new</sub>) &ge; 0.</li>
+     <li><b>Goal</b>: the corrected puzzle is solvable (optionally: has exactly one solution).</li>
+     <li><b>Limit</b>: at most 3 corrections by default (4 in the experiments).</li></ul></div>
+   <div class="glass"><h3 style="margin-top:0">Keeping the branching small</h3>
+    <p style="text-align:left">Correcting any of 81 cells to any of 8 digits would be hopeless. Only the 15 cells with the smallest margin between the best and second-best probability are candidates, each with its 2 most likely alternatives: at most 30 actions per state, and states are deduplicated because order does not matter. The goal test calls the CSP; a state with a duplicate pair that no candidate can fix is pruned without calling it.</p></div>
+  </div>
+  <h3>The three algorithms</h3>
+  <table><thead><tr><th>Algorithm</th><th>Priority</th><th>Optimal?</th><th>Role</th></tr></thead><tbody>
+   <tr><td><span class="dot" style="background:#3d8bff"></span>UCS</td><td>g (cost so far)</td><td class="ok">yes</td><td>finds the most likely correction set</td></tr>
+   <tr><td><span class="dot" style="background:#21d4fd"></span>Greedy best-first</td><td>h</td><td class="warn">no</td><td>few expansions, may call the CSP more often</td></tr>
+   <tr><td><span class="dot" style="background:#a78bfa"></span>A*</td><td>g + h</td><td class="ok">yes (admissible h)</td><td>UCS-quality answer with fewer nodes</td></tr></tbody></table>
+  <h3>Heuristic and why it is admissible</h3>
+  <p>Every duplicate-digit conflict (two equal digits in one unit) must be resolved, so at least one of its two cells has to change. Changing a cell <i>c</i> costs at least its cheapest alternative <i>m(c)</i> and a cell that is not a candidate cannot change at all. Hence:</p>
+  <div class="eq">h(state) = max over conflicts (a, b) of  min( m(a), m(b) )      (h = &infin; if no candidate can fix a conflict)</div>
+  <p>Any solution must pay at least this much for the single hardest conflict, so <i>h</i> never overestimates the remaining cost. It is evaluated on the corrected grid of each state, and states reached by a cheaper path are re-opened, so A* returns the same optimal cost as UCS. The test suite checks UCS and A* against a brute-force enumeration of all correction sets on a small pool.</p>
+  <h3>Counters and guard rails</h3>
+  <p>Each run reports nodes <b>expanded</b> and <b>generated</b>, the number of <b>CSP calls</b> and their total CSP effort. A cap of 4,000 expanded nodes protects the experiments; a run that reaches it counts as a failure. If the open list empties, the answer is <i>unreadable</i>.</p>
+  <div class="note">Design choice: the goal is &ldquo;solvable&rdquo;, as in the project brief. The cheapest solvable puzzle is sometimes a different valid puzzle, which is the main source of failures analysed in Section 10; the optional &ldquo;unique&rdquo; goal addresses it.</div>
+ </div>
+ <footer class="rf"><span>__NAME__ &middot; ID __ID__</span><span>6 / 12</span></footer>
+</section>
+
+<!-- ============ 7 integration ============ -->
+<section class="page" id="p7">
+ <header class="rh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>__PROJECT__</span></header>
+ <div class="body">
+  <h2><span class="idx">6</span>Integration</h2>
+  <p>The integrated system (<code>integration/pipeline.py</code>) connects the three parts exactly as the brief describes:</p>
+  <ol>
+   <li><b>Read.</b> Empty cells are found by the brightness rule; the network gives a probability vector for every other cell and the first reading is its arg-max.</li>
+   <li><b>Check.</b> The CSP runs on the first reading. AC-3 finds duplicate givens immediately; if the puzzle is solvable the system returns its solution, with no correction and no search.</li>
+   <li><b>Correct.</b> Otherwise the search proposes correction sets in order of cost (UCS, Greedy or A*).</li>
+   <li><b>Test.</b> Each proposal is passed to the CSP. The first solvable one wins (or the first with a unique solution, in the extension). If the CSP fails, the proposal is discarded and the search continues.</li>
+   <li><b>Report.</b> The result contains the corrected puzzle, its solution and a <b>correction log</b>: cell, read digit, new digit, cost.</li>
+  </ol>
+<pre>read, p = network(image)                      # arg-max reading + probabilities
+if csp.solve(read).solved:  return solution   # nothing to correct
+for corrections in search(read, p, algo):     # cheapest first
+    if csp.solve(apply(read, corrections)).solved:
+        return solution, corrections          # first solvable puzzle wins
+return "unreadable", 5 least confident cells</pre>
+  <h3>When there is no solution</h3>
+  <p>If no puzzle is reachable within the correction limit, the system says <i>unreadable</i> and lists the least confident cells (cell, digit read, confidence) so that a person knows where to look. A reading that is unsolvable with correction switched off is reported as <i>no solution</i>.</p>
+  <h3>Design choices</h3>
+  <table><thead><tr><th>Choice</th><th>Reason</th></tr></thead><tbody>
+   <tr><td>Probabilities as costs</td><td>a single quantity links the network to the search; cheap corrections are the likely ones</td></tr>
+   <tr><td>Candidate cells by margin</td><td>keeps the branching factor at 30 while still containing almost every injected misread</td></tr>
+   <tr><td>CSP as the goal test</td><td>reuses the solver exactly as designed; a failing proposal costs one CSP call</td></tr>
+   <tr><td>NumPy network, seeded generator</td><td>no GPU needed and every instance of every experiment can be regenerated</td></tr>
+   </tbody></table>
+  <h3>Code layout and tests</h3>
+  <p>The code is split into <code>data/</code> (preprocessing, generator), <code>nn/</code> (MLP, training, calibration), <code>csp/</code>, <code>search/</code>, <code>integration/</code> with <code>run_demo.py</code>, and <code>eval/</code> (experiments, dashboard) with <code>tests/</code>.</p>
+  <p>The 19 tests cover <b>normal</b> cases (all four CSP modes against the published solution, inference effect, AC-3 counters, generator uniqueness and seeding, search against a known answer and against brute force), <b>edge</b> cases (complete grid, empty grid, many-solution puzzle, no correction needed, correction limit) and <b>impossible</b> cases (duplicate givens in every mode, empty domain without duplicates, &ldquo;unreadable&rdquo;).</p>
+ </div>
+ <footer class="rf"><span>__NAME__ &middot; ID __ID__</span><span>7 / 12</span></footer>
+</section>
+
+<!-- ============ 8 exp1 ============ -->
+<section class="page" id="p8">
+ <header class="rh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>__PROJECT__</span></header>
+ <div class="body">
+  <h2><span class="idx">7</span>Experiment 1: UCS vs Greedy vs A*</h2>
+  <p><b>Setup.</b> For each of 5 seeds, 20 puzzles with 30 givens are generated and each is read with 0, 1, 2, 3 and 4 injected misreads, i.e. 100 puzzles per level. All three algorithms see the same instances. The correction limit is 4 (so that the 4-misread level is reachable), the search is capped at 4,000 expanded nodes, and the values below are means over the 5 per-seed means with the standard deviation across seeds.</p>
+  <div class="cols2">
+   <figure><div class="legend" id="lg_a"></div><div class="chart" id="c_nodes"></div><figcaption><b>Figure 4.</b> Nodes expanded (log scale). Error bars: &plusmn; 1 s.d. across seeds.</figcaption></figure>
+   <figure><div class="legend" id="lg_b"></div><div class="chart" id="c_rec"></div><figcaption><b>Figure 5.</b> Exact recovery rate. UCS and A* coincide (A* dashed).</figcaption></figure>
+  </div>
+  <table><thead><tr><th>Misreads</th><th>Algorithm</th><th class="num">Nodes expanded</th><th class="num">Nodes generated</th><th class="num">CSP calls</th><th class="num">Exact recovery</th></tr></thead><tbody id="t1"></tbody></table>
+  <h3>Findings</h3>
+  <ul>
+   <li><b>A* matches UCS and expands far fewer nodes.</b> At 3 misreads UCS expands {{exp_ucs_3}} nodes on average, A* {{exp_astar_3}} and Greedy {{exp_greedy_3}}; at 4 misreads the difference is {{exp_ucs_4}} against {{exp_astar_4}}. UCS and A* have identical recovery and CSP calls, as expected for two optimal algorithms.</li>
+   <li><b>Greedy is cheapest in nodes but not in total work.</b> It makes more CSP calls than the optimal algorithms ({{csp_greedy_3}} against {{csp_ucs_3}} at 3 misreads) because it commits to cheap-looking corrections that the CSP then rejects, and its recovery is slightly lower ({{rec_greedy_3}} against {{rec_ucs_3}}).</li>
+   <li><b>Recovery falls with the number of misreads</b> ({{rec_ucs_1}}, {{rec_ucs_2}}, {{rec_ucs_3}}, {{rec_ucs_4}} for 1 to 4), mainly because several different corrections can make the puzzle solvable and the cheapest is not always the true one (Section 10).</li>
+   <li>Variance at 4 misreads is large (s.d. {{expsd_ucs_4}} nodes for UCS): the cost depends on how many candidate cells carry the misreads.</li>
+  </ul>
+ </div>
+ <footer class="rf"><span>__NAME__ &middot; ID __ID__</span><span>8 / 12</span></footer>
+</section>
+
+<!-- ============ 9 exp2 + exp3 ============ -->
+<section class="page" id="p9">
+ <header class="rh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>__PROJECT__</span></header>
+ <div class="body">
+  <h2><span class="idx">8</span>Experiments 2 and 3</h2>
+  <h3>Experiment 2: backtracking, forward checking and AC-3</h3>
+  <p>For each of 5 seeds, 10 unique-solution puzzles with 25, 30 and 35 givens are solved by BT, BT + FC and BT + FC + AC-3 with a static variable order and a cap of 200,000 assignments.</p>
+  <div class="cols2">
+   <figure><div class="legend" id="lg_c"></div><div class="chart" id="c_csp"></div><figcaption><b>Figure 6.</b> Assignments per puzzle (log scale).</figcaption></figure>
+   <table style="align-self:start"><thead><tr><th>Givens</th><th>Method</th><th class="num">Assignments</th><th class="num">Solved</th></tr></thead><tbody id="t2"></tbody></table>
+  </div>
+  <ul>
+   <li>Each inference step helps: at 30 givens forward checking cuts the assignments from {{asg30_bt}} to {{asg30_fc}} and adding AC-3 to {{asg30_ac}} (&minus;{{red30}}%); at 35 givens the reduction is {{red35}}%.</li>
+   <li>The sparse 25-given puzzles are the hardest: plain backtracking hits the cap on some of them ({{solved25_bt}}% solved against {{solved25_ac}}% with FC + AC-3), and the gain from AC-3 shrinks to {{red25}}%.</li>
+   <li>AC-3 costs extra arc revisions, so its benefit is in search effort rather than always in wall-clock time on the easiest puzzles.</li>
+  </ul>
+  <h3>Experiment 3: is the network needed?</h3>
+  <p>Same instances, three ways of handling a broken reading: the NN-guided UCS search; <i>no correction</i> (accept the first reading if it is solvable); and <i>random correction</i> (up to 50 random sets of 1 to 3 corrections drawn among the top-3 digits of random cells, stopping at the first solvable puzzle).</p>
+  <div class="cols2">
+   <figure><div class="legend" id="lg_d"></div><div class="chart" id="c_nn"></div><figcaption><b>Figure 7.</b> Exact recovery rate by number of injected misreads.</figcaption></figure>
+   <table style="align-self:start"><thead><tr><th>Misreads</th><th class="num">NN-guided</th><th class="num">None</th><th class="num">Random</th></tr></thead><tbody id="t3"></tbody></table>
+  </div>
+  <ul>
+   <li>With no correction the system never recovers a broken puzzle ({{x1_none}} for 1 to 3 misreads). Random correction only works for a single misread ({{x1_rand}}) and not at all beyond.</li>
+   <li>NN-guided correction recovers {{x1_nn}}, {{x2_nn}} and {{x3_nn}} of the puzzles with 1, 2 and 3 misreads. The network's probabilities are what makes the search effective: they rank the corrections.</li>
+  </ul>
+ </div>
+ <footer class="rf"><span>__NAME__ &middot; ID __ID__</span><span>9 / 12</span></footer>
+</section>
+
+<!-- ============ 10 cases ============ -->
+<section class="page" id="p10">
+ <header class="rh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>__PROJECT__</span></header>
+ <div class="body">
+  <h2><span class="idx">9</span>Corrected cases</h2>
+  <p>The cases below are real runs of the pipeline (generated with fixed seeds; {{cases_exact}} of {{cases_n}} cases recovered the exact original puzzle, the rest were solved with a different valid puzzle). Digits are real MNIST test images. In each board the misread digit is struck through in red and the correction is green.</p>
+  <div id="caseBox" style="display:flex;flex-direction:column;gap:9px"></div>
+  <div class="note w">The amber outcome shows the main limitation: the CSP accepts any solvable puzzle, so when a cheaper wrong correction also makes the puzzle solvable, the system returns a valid Sudoku that is not the one on the page.</div>
+ </div>
+ <footer class="rf"><span>__NAME__ &middot; ID __ID__</span><span>10 / 12</span></footer>
+</section>
+
+<!-- ============ 11 limitations ============ -->
+<section class="page" id="p11">
+ <header class="rh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>__PROJECT__</span></header>
+ <div class="body">
+  <h2><span class="idx">10</span>Limitations and discussion</h2>
+  <h3>Why recovery is below 100%</h3>
+  <p>In a diagnostic run of 60 puzzles with 2 injected misreads, every failure (17 of 60, 28%) had the same cause: the search found a cheaper set of corrections that also made the puzzle solvable, so the CSP accepted a valid but different puzzle. None of the failures was caused by the true cell being outside the candidate set. Using the optional &ldquo;unique solution&rdquo; goal raised exact recovery from 72% to 88% in that run, because most such alternative puzzles have many solutions.</p>
+  <h3>Threats to validity</h3>
+  <ul>
+   <li><b>Injected, not natural, misreads.</b> Misreads come from a documented rule over real hard digits. Real handwritten Sudoku would add other errors (segmentation, blank-cell detection, touching digits) that this project does not model.</li>
+   <li><b>Broken-first-reading filter.</b> For <i>k</i> &ge; 1 we keep only instances whose first reading is unsolvable. Misreads that silently yield another solvable puzzle are, by construction, outside the study.</li>
+   <li><b>Cells of a clean MNIST type.</b> Digits are centred 28&times;28 crops with different writers in train and test, but they are far cleaner than digits written in grid cells.</li>
+   <li><b>Search caps.</b> A cap of 4,000 expanded nodes and a correction limit of 4 bound the 4-misread level; capped runs count as failures, which slightly understates recovery there.</li>
+   <li><b>Statistics.</b> 5 seeds with 20 puzzles each gives 100 puzzles per level; the standard deviations across seeds (about 0.05 to 0.15) are large enough that small differences between Greedy and UCS recovery should not be over-read.</li>
+   <li><b>Experiment 2 conditions.</b> Static variable order and a fixed cap are chosen to isolate the effect of the inference. Other variable-ordering heuristics (such as MRV, which the integrated system uses) were not part of this comparison.</li>
+  </ul>
+  <h3>What we would do next</h3>
+  <ul>
+   <li>Make &ldquo;exactly one solution&rdquo; the default goal and measure it with the same 100-puzzle protocol.</li>
+   <li>Re-estimate the candidate size (15 cells, 2 alternatives) and the correction limit against recovery and cost.</li>
+   <li>Replace the injection rule by photographed or hand-drawn Sudoku, with a cell-segmentation step in front of the network.</li>
+   <li>Train a small CNN and compare calibration with the MLP; add data augmentation for the hard classes.</li>
+  </ul>
+  <div class="note">The system is decision support for a reader of puzzles; it is not evidence that handwriting recognition is solved. Its value is that probability, search and constraints compensate for each other's weaknesses.</div>
+ </div>
+ <footer class="rf"><span>__NAME__ &middot; ID __ID__</span><span>11 / 12</span></footer>
+</section>
+
+<!-- ============ 12 conclusion ============ -->
+<section class="page" id="p12">
+ <header class="rh"><span><b>Sudoku Reader</b> &middot; __CODE__</span><span>__PROJECT__</span></header>
+ <div class="body">
+  <h2><span class="idx">11</span>Conclusions</h2>
+  <ul>
+   <li>A small NumPy MLP reaches {{acc_mlp}}% digit accuracy and, after temperature scaling, probabilities calibrated well enough (ECE {{ece_after}}) to be used as costs.</li>
+   <li>Searching over correction sets with the network's own probabilities turns a broken reading into a solved puzzle: exact recovery {{x1_nn}}, {{x2_nn}} and {{x3_nn}} for 1, 2 and 3 misreads, against {{x1_none}} without correction and at most {{x1_rand}} with random correction.</li>
+   <li>A* gives the quality of UCS with a fraction of the nodes, and the admissible conflict heuristic is simple enough to prove and to test against brute force.</li>
+   <li>Forward checking and AC-3 reduce CSP effort substantially on sparse puzzles, and AC-3 doubles as the detector that tells the integrated system the reading is broken.</li>
+   <li>The main weakness is the goal &ldquo;solvable&rdquo;: the cheapest solvable puzzle is not always the written one.</li>
+  </ul>
+  <h3>Reproducing the results</h3>
+<pre>pip install -r requirements.txt
+python data/make_data.py --download --seed 0    # MNIST + 50k/10k split
+python -m nn.train --epochs 10                  # network + baseline + calibration
+python run_demo.py --seed 3 --misreads 2        # demo and dashboard
+python -m pytest tests -q                       # 19 tests
+python -m eval.experiments --seeds 5 --n 20     # the three experiments
+python docs/build_docs.py                       # this report and the slides</pre>
+  <p>Everything is seeded; the experiment tables (<code>outputs/exp*.csv</code>) and this report are regenerated from the code. A desktop launcher (<code>app.py</code> or the built <code>SudokuReader.exe</code>) runs the demo with one button and opens the dashboard.</p>
+  <h3>References</h3>
+  <ul class="refs">
+   <li>LeCun, Y., Bottou, L., Bengio, Y., Haffner, P. (1998). Gradient-based learning applied to document recognition. <i>Proceedings of the IEEE</i>, 86(11).</li>
+   <li>Russell, S., Norvig, P. (2020). <i>Artificial Intelligence: A Modern Approach</i>, 4th ed. Pearson (search, constraint satisfaction, AC-3).</li>
+   <li>Mackworth, A. K. (1977). Consistency in networks of relations. <i>Artificial Intelligence</i>, 8(1).</li>
+   <li>Hart, P. E., Nilsson, N. J., Raphael, B. (1968). A formal basis for the heuristic determination of minimum cost paths. <i>IEEE Trans. Systems Science and Cybernetics</i>, 4(2).</li>
+   <li>Guo, C., Pleiss, G., Sun, Y., Weinberger, K. Q. (2017). On calibration of modern neural networks. <i>ICML</i>.</li>
+   <li>Kingma, D. P., Ba, J. (2015). Adam: a method for stochastic optimization. <i>ICLR</i>.</li>
+  </ul>
+ </div>
+ <footer class="rf"><span>__NAME__ &middot; ID __ID__</span><span>12 / 12</span></footer>
+</section>
+
+<script>
+const D=/*DATA*/null;
+/*SHARED_JS*/
+/* architecture diagram */
+(function(){
+ const s=$('arch'),defs=el('defs',{},s);
+ const g=el('linearGradient',{id:'ag',x1:0,y1:0,x2:1,y2:1},defs);el('stop',{offset:0,'stop-color':'#0075ff'},g);el('stop',{offset:1,'stop-color':'#21d4fd'},g);
+ const mk=el('marker',{id:'ar',viewBox:'0 0 10 10',refX:8,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'},defs);el('path',{d:'M0 0L10 5L0 10z',fill:'#8fb4ff'},mk);
+ const bx=[['Handwritten mosaic','9 x 9 digit images',20],['Neural network','digit probabilities',150],['AC-3 check','duplicate givens?',280],['Search','UCS / Greedy / A*',410],['CSP solver','BT + FC + AC-3',540]];
+ bx.forEach(([a,b,x],i)=>{el('rect',{x,y:50,width:120,height:62,rx:14,fill:'rgba(15,24,70,.9)',stroke:i==3?'#a78bfa':i==4?'#01b574':'url(#ag)','stroke-width':1.6},s);
+  let t=el('text',{x:x+60,y:76,'text-anchor':'middle',fill:'#fff','font-size':12,'font-weight':700},s);t.textContent=a;
+  t=el('text',{x:x+60,y:95,'text-anchor':'middle',fill:'#a0aec0','font-size':10},s);t.textContent=b;
+  if(i<4)el('path',{d:`M${x+122} 81H${x+148}`,stroke:'#8fb4ff','stroke-width':1.6,fill:'none','marker-end':'url(#ar)'},s)});
+ el('path',{d:'M600 114V160H470V114',stroke:'#f0605d','stroke-width':1.6,fill:'none','stroke-dasharray':'5 4','marker-end':'url(#ar)'},s);
+ let t=el('text',{x:535,y:176,'text-anchor':'middle',fill:'#f0605d','font-size':10.5,'font-weight':700},s);t.textContent='CSP fails: try the next cheapest corrections';
+ t=el('text',{x:340,y:136,'text-anchor':'middle',fill:'#a0aec0','font-size':10},s);t.textContent='solvable: done';
+ el('path',{d:'M340 114V126',stroke:'#01b574','stroke-width':1.4,fill:'none'},s);
+ t=el('text',{x:340,y:30,'text-anchor':'middle',fill:'#01b574','font-size':11,'font-weight':700},s);t.textContent='solution + correction log, or "unreadable" with the least confident cells';
+ el('path',{d:'M600 46V36H345',stroke:'#01b574','stroke-width':1.4,fill:'none','marker-end':'url(#ar)'},s)})();
+/* cover + examples */
+const C=D.cases;
+(function(){const c=C[2]||C[0];board($('coverBoard'),c.read,c.final,'fixed');
+ const e=C[2]||C[0];board($('ex_read'),e.read,e.final,'read');board($('ex_fix'),e.read,e.final,'fixed')})();
+/* charts and tables */
+function boot(){
+ chartNodes('c_nodes',215);chartRecovery('c_rec',215);chartCsp('c_csp',195);chartNN('c_nn',195);
+ legendTo('lg_a',SER(REC).map(s=>[s.n,s.c]));legendTo('lg_b',SER(REC).map(s=>[s.n,s.c]));
+ const nm2=['BT','BT+FC','BT+FC+AC-3'],nm3=['NN-guided (UCS)','no correction','random correction'];
+ legendTo('lg_c',nm2.map((n,i)=>[n,COL[i]]));legendTo('lg_d',nm3.map((n,i)=>[n,COL[i]]));
+ confusion($('cm'),D.nn.mlp.confusion_matrix);
+ let h='';[2,3,4].forEach(k=>['UCS','GREEDY','ASTAR'].forEach((a,i)=>{const r=find(D.exp1,{misreads:k,algorithm:a});
+  h+=`<tr><td>${k}</td><td><span class="dot" style="background:${COL[i]}"></span>${NM[a]}</td><td class="num">${f1(M(r['nodes expanded']))} &plusmn; ${f1(S(r['nodes expanded']))}</td><td class="num">${fi(M(r['nodes generated']))}</td><td class="num">${f1(M(r['CSP calls']))}</td><td class="num">${f2(M(r[REC]))} &plusmn; ${f2(S(r[REC]))}</td></tr>`}));
+ $('t1').innerHTML=h;
+ h='';[25,30,35].forEach(g=>nm2.forEach((n,i)=>{const r=find(D.exp2,{givens:g,method:n}),k=Object.keys(r).find(x=>x.startsWith('solved'));
+  h+=`<tr><td>${g}</td><td><span class="dot" style="background:${COL[i]}"></span>${n}</td><td class="num">${fi(M(r.assignments))}</td><td class="num">${Math.round(100*M(r[k]))}%</td></tr>`}));
+ $('t2').innerHTML=h;
+ h='';[0,1,2,3].forEach(k=>{h+='<tr><td>'+k+'</td>'+nm3.map(n=>{const r=find(D.exp3,{misreads:k,method:n})[REC];return `<td class="num">${f2(M(r))} &plusmn; ${f2(S(r))}</td>`}).join('')+'</tr>'});
+ $('t3').innerHTML=h;
+ /* cases: one exact-1, one exact-2/3 and a 'different' outcome if there is one */
+ const pick=[C.findIndex(c=>c.exact&&c.misreads===1),C.findIndex(c=>c.exact&&c.misreads>=2),C.findIndex(c=>!c.exact),C.findIndex(c=>c.exact&&c.misreads===3)];
+ const idx=[...new Set(pick.filter(i=>i>=0))].slice(0,4),box=$('caseBox');
+ idx.forEach(i=>{const c=C[i],card=div('glass case',box),b=div('',card);board(b,c.read,c.final,'fixed');
+  const kind=c.exact?['ok','Exact solution recovered']:c.status==='solved'?['warn','Solved, but a different valid puzzle']:['badc','Unreadable'];
+  const log=c.corrections.map(w=>`<div class="logl">row ${Math.floor(w[0]/9)+1}, col ${w[0]%9+1}: <i>${w[1]}</i> &rarr; <em>${w[2]}</em> &nbsp;<span class="muted">cost ${w[3].toFixed(2)}</span></div>`).join('')||'<div class="logl muted">No correction needed.</div>';
+  card.insertAdjacentHTML('beforeend',`<div class="meta"><b>Case ${i+1} &middot; ${c.misreads} injected misread${c.misreads==1?'':'s'}</b><span class="chip ${kind[0]}">${kind[1]}</span>
+   <span class="muted">seed ${c.seed} &middot; correction cost ${c.cost.toFixed(2)} &middot; ${c.expanded} expanded, ${c.generated} generated, ${c.csp_calls} CSP call${c.csp_calls==1?'':'s'}</span>${log}</div>`);
+  card.insertBefore(card.lastElementChild,null)});
+ document.querySelectorAll('.case').forEach(c=>{const b=c.firstElementChild;b.style.width='172px'});
+}
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(boot);else boot();
+/* helpers for review: ?page=N shows one page, ?check lists pages whose content overflows */
+(function(){const q=location.search,m=q.match(/page=(\d+)/);
+ if(m){document.body.classList.add('only');$('p'+m[1]).classList.add('on')}
+ if(q.includes('check'))setTimeout(()=>{const bad=[];document.querySelectorAll('.page').forEach(p=>{const b=p.querySelector('.body'),f=p.querySelector('.rf');
+   const last=b&&b.lastElementChild,over=(last?last.getBoundingClientRect().bottom:0)-(f?f.getBoundingClientRect().top:p.getBoundingClientRect().bottom);if(over>-6||p.scrollHeight>p.clientHeight+2)bad.push(p.id+':'+Math.round(over))});
+  const pre=document.createElement('pre');pre.id='chk';pre.textContent='OVERFLOW='+JSON.stringify(bad);document.body.appendChild(pre)},1500);
+})();
+</script>
+</body></html>

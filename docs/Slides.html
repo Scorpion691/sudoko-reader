@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Handwritten Sudoku Reader and Solver - Slides</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#060b28;--fg:#fff;--muted:#a0aec0;--line:rgba(255,255,255,.1);--blue:#0075ff;--blue2:#3d8bff;--cyan:#21d4fd;--violet:#a78bfa;--green:#01b574;--red:#f0605d;--amber:#ffb547;--ease:cubic-bezier(.2,.8,.2,1)}
+*{box-sizing:border-box}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;color:var(--fg);font:13px/1.55 'Plus Jakarta Sans','Segoe UI',system-ui,sans-serif;background:#03061a}
+h1,h2,h3,p{margin:0}
+.glass{border-radius:16px;border:1px solid var(--line);background:linear-gradient(127deg,rgba(15,24,70,.85) 19%,rgba(8,12,38,.6) 76%)}
+.muted{color:var(--muted)}.b{font-weight:700}.ok{color:var(--green)}.warn{color:var(--amber)}.badc{color:var(--red)}
+.tag{display:inline-block;font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:99px;background:rgba(0,117,255,.18);border:1px solid rgba(0,117,255,.4);color:#cfe1ff}
+code,.mono{font-family:Consolas,'Cascadia Mono',monospace;font-size:.92em;color:#bcd3ff}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th{color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px;font-weight:600}
+.num{text-align:right}th.num{text-align:right}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px}
+.chart{position:relative}.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.axt{fill:#a0aec0;font-size:10.5px}.grd{stroke:rgba(255,255,255,.09);stroke-dasharray:3 4}
+.vl{fill:#fff;font-size:9.5px;font-weight:700;text-anchor:middle}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-bottom:4px}
+.legend span{display:inline-flex;align-items:center;gap:6px}.legend i{width:9px;height:9px;border-radius:3px;display:inline-block}
+
+/* sudoku board (same component as the dashboard, static) */
+.i-board{position:relative;aspect-ratio:1}
+.i-board svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 14px rgba(0,117,255,.5))}
+.i-board line{stroke:rgba(150,190,255,.6);stroke-linecap:round}
+.i-cells{position:absolute;inset:0;display:grid;grid-template:repeat(9,1fr)/repeat(9,1fr)}
+.ic{position:relative}
+.dg{position:absolute;inset:13%;background:#fff;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center}
+.dg.t{display:grid;place-items:center;background:none;color:#fff;font:700 13px 'Plus Jakarta Sans','Segoe UI',sans-serif}
+.dg.wrong{opacity:0}
+.dg.right{background:#01b574}.dg.t.right{background:none;color:#01b574}
+.was{position:absolute;top:4%;right:7%;font-size:8px;font-weight:800;font-style:normal;color:#f0605d;text-decoration:line-through}
+.dg.mis{background:#f0605d}.dg.t.mis{background:none;color:#f0605d}
+.dg.wrong.show{opacity:1}
+
+@page{size:1280px 720px;margin:0}
+html,body{height:100%;overflow:hidden}
+body{background:#03061a;font-size:22px}
+#viewport{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(900px 560px at 85% -10%,rgba(40,80,230,.35),transparent 62%),#03061a}
+#stage{position:relative;width:1280px;height:720px;transform-origin:center;flex:none}
+.slide{position:absolute;inset:0;padding:54px 70px 50px;display:flex;flex-direction:column;gap:20px;overflow:hidden;visibility:hidden;opacity:0;transition:opacity .55s ease,visibility 0s .55s;
+  background:radial-gradient(760px 480px at 92% -6%,rgba(40,80,230,.42),transparent 62%),radial-gradient(640px 480px at -6% 106%,rgba(10,75,216,.36),transparent 62%),linear-gradient(160deg,#060b28,#0a1130 60%,#05091f)}
+.slide.active{visibility:visible;opacity:1;transition:opacity .55s ease}
+.rv{opacity:0;transform:translateY(22px);transition:opacity .7s var(--ease),transform .8s var(--ease)}
+.slide.active .rv{opacity:1;transform:none;transition-delay:calc(var(--d,0)*100ms + 150ms)}
+.sh{display:flex;justify-content:space-between;font-size:14px;font-weight:700;letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
+.sh b{color:#fff}
+h1{font-size:62px;line-height:1.05;font-weight:800;letter-spacing:-.02em}
+h2{font-size:42px;font-weight:800;letter-spacing:-.015em;line-height:1.1}
+h2 em{font-style:normal;color:var(--cyan)}
+.lead{font-size:24px;color:#cfe1ff;line-height:1.45}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:34px;align-items:center;flex:1;min-height:0}
+.two.w{grid-template-columns:1.15fr 1fr}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.bul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:14px;font-size:24px;line-height:1.4;color:#e7eefb}
+.bul li{padding-left:30px;position:relative}
+.bul li::before{content:"";position:absolute;left:0;top:.55em;width:12px;height:12px;border-radius:4px;background:var(--blue);box-shadow:0 0 12px var(--blue)}
+.bul b{color:#fff}
+.glass{padding:20px 24px;border-radius:20px}
+.stat{padding:18px 22px;border-radius:18px}
+.stat small{display:block;color:var(--muted);font-size:15px;font-weight:600}.stat b{display:block;font-size:44px;line-height:1.1;font-weight:800;font-variant-numeric:tabular-nums}.stat i{display:block;font-style:normal;color:var(--green);font-size:15px;font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
+.tag{font-size:15px;padding:5px 14px}
+.eq{font-family:Consolas,'Cascadia Mono',monospace;font-size:24px;color:#bcd3ff;background:rgba(8,13,44,.85);border:1px solid var(--line);border-radius:14px;padding:12px 18px;text-align:center}
+pre{margin:0;font:19px/1.55 Consolas,'Cascadia Mono',monospace;color:#bcd3ff;background:rgba(4,8,31,.92);border:1px solid var(--line);border-radius:16px;padding:16px 20px;white-space:pre-wrap}
+th{font-size:13px;padding:8px 12px}td{font-size:19px;padding:9px 12px}
+.big{font-size:150px;font-weight:800;line-height:1;letter-spacing:-.03em;background:linear-gradient(135deg,#fff,var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+.note{border-left:4px solid var(--amber);background:rgba(255,181,71,.08);border-radius:0 14px 14px 0;padding:12px 18px;font-size:20px;color:#fde9c8}
+.foot{margin-top:auto;display:flex;justify-content:space-between;font-size:14px;color:var(--muted)}
+.cases3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;flex:1;min-height:0}
+.ccard{padding:16px;display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center}
+.ccard .bd{width:232px}.ccard b{font-size:20px}.ccard span{font-size:16px;color:var(--muted)}.ccard .logl{font-size:16px;color:#dfe7f5}.logl i{color:var(--red);font-style:normal;text-decoration:line-through}.logl em{color:var(--green);font-style:normal;font-weight:700}
+.chip{display:inline-block;font-size:14px;font-weight:700;padding:3px 12px;border-radius:99px;border:1px solid currentColor}
+.legend{font-size:15px}
+.step{display:flex;gap:14px;align-items:flex-start}.step .n{flex:none;width:38px;height:38px;border-radius:12px;background:var(--blue);display:grid;place-items:center;font-weight:800;box-shadow:0 0 16px rgba(0,117,255,.6)}
+.step div:last-child{font-size:21px;line-height:1.4;color:#e7eefb}
+.demo{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.demo .glass{display:flex;flex-direction:column;gap:8px}.demo b{font-size:23px}.demo span{font-size:18px;color:#cfe1ff}
+/* controls */
+#bar{position:fixed;left:0;bottom:0;height:4px;width:0;background:linear-gradient(90deg,var(--blue),var(--cyan));box-shadow:0 0 14px var(--cyan);transition:width .5s var(--ease);z-index:20}
+#hud{position:fixed;right:18px;bottom:14px;display:flex;gap:10px;align-items:center;font-size:13px;color:var(--muted);z-index:20;opacity:.75}
+#hud kbd{border:1px solid var(--line);border-radius:6px;padding:1px 7px;color:#cfe1ff;font:inherit}
+#notes{position:fixed;left:0;right:0;bottom:0;max-height:34vh;overflow:auto;background:rgba(3,6,26,.96);border-top:1px solid rgba(0,117,255,.5);padding:14px 28px 18px;z-index:30;display:none;font-size:17px;line-height:1.5;color:#dfe7f5}
+#notes.on{display:block}#notes b{color:var(--cyan)}
+body.print{overflow:visible;height:auto}
+body.print #viewport{position:static;display:block;background:none}
+body.print #stage{transform:none!important;width:auto;height:auto}
+body.print .slide{position:relative;width:1280px;height:720px;visibility:visible;opacity:1;break-after:page;page-break-after:always}
+body.print .rv{opacity:1;transform:none;transition:none}
+body.print #bar,body.print #hud,body.print #notes{display:none}
+@media print{html,body{height:auto;overflow:visible}}
+</style></head>
+<body>
+<div id="viewport"><div id="stage">
+
+<!-- 1 title -->
+<section class="slide" data-notes="<b>0:30</b> Introduce yourself and the project in one sentence: a neural network reads handwritten Sudoku digits, search fixes the misreads and a CSP solves the puzzle. Say that everything shown is produced by the code in the repository.">
+ <div class="two w" style="flex:1">
+  <div class="col">
+   <div class="rv" style="--d:0;font-size:16px;letter-spacing:.32em;font-weight:800;color:var(--cyan)">SEARCH + CSP + NEURAL NETWORK &nbsp;&middot;&nbsp; P7</div>
+   <h1 class="rv" style="--d:1">Handwritten Sudoku<br>Reader and Solver</h1>
+   <p class="lead rv" style="--d:2;max-width:640px">A network reads the digits, search finds the cheapest corrections, a constraint solver solves the puzzle.</p>
+   <div class="rv" style="--d:3;display:flex;flex-direction:column;gap:2px;margin-top:10px"><b style="font-size:30px">Abdelrhman Elhawarry</b><span class="muted" style="font-size:20px">Student ID 320210121</span></div>
+   <div class="rv" style="--d:4;display:flex;gap:10px;flex-wrap:wrap"><span class="tag">MNIST</span><span class="tag">UCS &middot; Greedy &middot; A*</span><span class="tag">BT &middot; FC &middot; AC-3</span></div>
+  </div>
+  <div class="rv" style="--d:2;display:grid;place-items:center"><div class="glass" style="padding:16px;width:420px"><div id="s1board"></div></div></div>
+ </div>
+</section>
+
+<!-- 2 problem -->
+<section class="slide" data-notes="<b>1:00</b> One wrong digit breaks the whole puzzle. Even at 97.8% accuracy, if errors were independent, about half of 30-given puzzles would contain a misread (0.978^30 = 0.51). The network alone is not enough, and a solver alone cannot read.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; P7</span><span>The problem</span></div>
+ <h2 class="rv" style="--d:0">One misread digit breaks <em>the whole puzzle</em></h2>
+ <div class="two">
+  <div class="col">
+   <ul class="bul">
+    <li class="rv" style="--d:1">The network is right <b>97.8%</b> of the time per digit.</li>
+    <li class="rv" style="--d:2">A puzzle has about <b>30</b> digits, and <b>all</b> of them must be right.</li>
+    <li class="rv" style="--d:3">If errors were independent, <b>about half</b> of the puzzles would contain a misread (0.978<sup>30</sup> &asymp; 0.51).</li>
+    <li class="rv" style="--d:4">The solver then says <b>&ldquo;no solution&rdquo;</b> and gives no hint where the error is.</li>
+   </ul>
+   <div class="note rv" style="--d:5">Goal: find the <b>least unlikely</b> corrections that make the puzzle solvable again.</div>
+  </div>
+  <div class="rv" style="--d:2;display:grid;place-items:center"><div class="glass" style="padding:16px;width:400px"><div id="s2board"></div></div></div>
+ </div>
+ <div class="foot"><span>Abdelrhman Elhawarry &middot; ID 320210121</span><span>2 / 15</span></div>
+</section>
+
+<!-- 3 architecture -->
+<section class="slide" data-notes="<b>1:00</b> Walk the pipeline left to right. The network gives probabilities, AC-3 detects that the reading is inconsistent, the search proposes corrections ordered by cost, the CSP tests each. If the CSP fails the search continues. If nothing works the system says unreadable and lists the least confident cells.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; P7</span><span>Idea</span></div>
+ <h2 class="rv" style="--d:0">Three AI parts, <em>one loop</em></h2>
+ <div class="rv" style="--d:1;flex:1;display:grid;place-items:center"><svg id="arch" viewBox="0 0 680 190" style="width:100%;height:auto"></svg></div>
+ <div class="stats">
+  <div class="glass stat rv" style="--d:2"><small>Neural network</small><b style="font-size:26px">probabilities</b><span class="muted" style="font-size:15px">cost of a correction</span></div>
+  <div class="glass stat rv" style="--d:3"><small>Search</small><b style="font-size:26px">UCS &middot; Greedy &middot; A*</b><span class="muted" style="font-size:15px">cheapest correction set</span></div>
+  <div class="glass stat rv" style="--d:4"><small>CSP</small><b style="font-size:26px">BT + FC + AC-3</b><span class="muted" style="font-size:15px">goal test and solver</span></div>
+ </div>
+ <div class="foot"><span>Abdelrhman Elhawarry &middot; ID 320210121</span><span>3 / 15</span></div>
+</section>
+
+<!-- 4 data -->
+<section class="slide" data-notes="<b>0:45</b> Real: MNIST digits, split 50k/10k as the brief asks, zero dropped. Generated: the Sudoku puzzles, the mosaics and the injected hard digits. Be explicit that the misreads are injected, not natural.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; P7</span><span>Data</span></div>
+ <h2 class="rv" style="--d:0">Real digits, <em>generated puzzles</em></h2>
+ <div class="two">
+  <div class="col">
+   <div class="stats">
+    <div class="glass stat rv" style="--d:1"><small>Train</small><b>45,053</b></div>
+    <div class="glass stat rv" style="--d:2"><small>Validation</small><b>9,024</b></div>
+    <div class="glass stat rv" style="--d:3"><small>Test</small><b>9,020</b></div>
+   </div>
+   <ul class="bul">
+    <li class="rv" style="--d:3"><b>Real:</b> MNIST digits 1&ndash;9, seeded 50k / 10k split.</li>
+    <li class="rv" style="--d:4"><b>Generated:</b> unique-solution puzzles (25 / 30 / 35 givens) and 252&times;252 mosaics of real test digits.</li>
+    <li class="rv" style="--d:5"><b>Injected:</b> <i>k</i> hard digits (misread by the network, true digit ranked 2nd or 3rd), first reading kept only if unsolvable.</li>
+   </ul>
+  </div>
+  <div class="rv" style="--d:2;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:center">
+   <div><div class="glass" style="padding:12px"><div id="s4a"></div></div><div class="muted" style="font-size:15px;text-align:center;margin-top:6px">first reading</div></div>
+   <div><div class="glass" style="padding:12px"><div id="s4b"></div></div><div class="muted" style="font-size:15px;text-align:center;margin-top:6px">after correction</div></div>
+  </div>
+ </div>
+ <div class="foot"><span>Abdelrhman Elhawarry &middot; ID 320210121</span><span>4 / 15</span></div>
+</section>
+
+<!-- 5 NN -->
+<section class="slide" data-notes="<b>0:45</b> A small MLP written in NumPy, trained in about 20 seconds on the CPU. It beats logistic regression by 5.5 points. Temperature scaling halves the calibration error, which matters because probabilities become costs: cost = log(p_read / p_new).">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; P7</span><span>Neural network</span></div>
+ <h2 class="rv" style="--d:0">A calibrated digit reader in <em>NumPy</em></h2>
+ <div class="two">
+  <div class="col">
+   <div class="stats">
+    <div class="glass stat rv" style="--d:1"><small>MLP accuracy</small><b>97.8%</b><i>+5.5 pts vs logistic regression</i></div>
+    <div class="glass stat rv" style="--d:2"><small>Calibration error</small><b>0.0037</b><i>from 0.0078 (T = 1.35)</i></div>
+   </div>
+   <ul class="bul" style="font-size:22px">
+    <li class="rv" style="--d:3">784 &rarr; 128 &rarr; 64 &rarr; 9, ReLU, Adam, 10 epochs, about 20 s on a CPU</li>
+    <li class="rv" style="--d:4">Probabilities become the <b>cost</b> of a correction:</li>
+   </ul>
+   <div class="eq rv" style="--d:5">cost(a &rarr; b) = log( p<sub>a</sub> / p<sub>b</sub> ) &ge; 0</div>
+  </div>
+  <div class="rv glass" style="--d:2;padding:14px;display:grid;place-items:center"><div id="cm" style="width:100%;max-width:430px"></div><div class="muted" style="font-size:15px">confusion matrix, test set</div></div>
+ </div>
+ <div class="foot"><span>Abdelrhman Elhawarry &middot; ID 320210121</span><span>5 / 15</span></div>
+</section>
+
+<!-- 6 CSP -->
+<section class="slide" data-notes="<b>0:45</b> 81 variables, domains 1-9, all-different on rows columns and boxes. Three separate switches: backtracking, forward checking, AC-3, each with counters. On the classic puzzle the assignments drop from 4,208 to 516 to 51.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; P7</span><span>Constraint satisfaction</span></div>
+ <h2 class="rv" style="--d:0">Backtracking, forward checking, <em>AC-3</em></h2>
+ <div class="two">
+  <div class="col">
+   <ul class="bul">
+    <li class="rv" style="--d:1">81 variables, domain 1&ndash;9, 27 all-different constraints</li>
+    <li class="rv" style="--d:2"><b>BT</b> assigns and undoes. <b>FC</b> removes the digit from the peers. <b>AC-3</b> prunes before the search and detects duplicate givens.</li>
+    <li class="rv" style="--d:3">Three separate switches, with counters: assignments, backtracks, revisions</li>
+   </ul>
+  </div>
+  <div class="rv glass" style="--d:2">
+   <div class="muted" style="font-size:15px;margin-bottom:8px">Classic 30-given puzzle, known answer</div>
+   <table><thead><tr><th>Method</th><th class="num">Assignments</th><th class="num">Backtracks</th></tr></thead><tbody>
+    <tr><td>BT</td><td class="num">4,208</td><td class="num">4,157</td></tr>
+    <tr><td>BT + FC</td><td class="num">516</td><td class="num">282</td></tr>
+    <tr><td>BT + AC-3</td><td class="num">51</td><td class="num">0</td></tr>
+    <tr><td>BT + FC + AC-3</td><td class="num">51</td><td class="num">0</td></tr></tbody></table>
+  </div>
+ </div>
+ <div class="foot"><span>Abdelrhman Elhawarry &middot; ID 320210121</span><span>6 / 15</span></div>
+</section>
+
+<!-- 7 search -->
+<section class="slide" data-notes="<b>1:00</b> State = set of corrections. Cost = how much less likely the new digit is. Goal = solvable by the CSP. Only the 15 least confident cells with 2 alternatives each, so branching is at most 30. A* heuristic: every duplicate pair needs one cell changed, so h is the max over pairs of the cheapest change. It never overestimates.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; P7</span><span>Search</span></div>
+ <h2 class="rv" style="--d:0">Search over <em>correction sets</em></h2>
+ <div class="two">
+  <div class="col">
+   <ul class="bul" style="font-size:22px">
+    <li class="rv" style="--d:1"><b>State:</b> a set of corrections {(cell, digit)}</li>
+    <li class="rv" style="--d:2"><b>Cost:</b> log(p<sub>read</sub> / p<sub>new</sub>), never negative</li>
+    <li class="rv" style="--d:3"><b>Goal:</b> the CSP solves the corrected puzzle</li>
+    <li class="rv" style="--d:4"><b>Branching:</b> 15 least-confident cells &times; 2 alternatives</li>
+   </ul>
+  </div>
+  <div class="col">
+   <div class="eq rv" style="--d:2;font-size:21px">h = max over conflicts (a, b) of min( m(a), m(b) )</div>
+   <p class="rv muted" style="--d:3;font-size:19px;line-height:1.45">Each duplicate pair needs one of its two cells changed, so the cheapest fix of the hardest conflict is a lower bound: <b style="color:#fff">h never overestimates</b>.</p>
+   <table class="rv" style="--d:4"><thead><tr><th>Algorithm</th><th>Priority</th><th>Optimal</th></tr></thead><tbody>
+    <tr><td><span class="dot" style="background:#3d8bff"></span>UCS</td><td>g</td><td class="ok">yes</td></tr>
+    <tr><td><span class="dot" style="background:#21d4fd"></span>Greedy</td><td>h</td><td class="warn">no</td></tr>
+    <tr><td><span class="dot" style="background:#a78bfa"></span>A*</td><td>g + h</td><td class="ok">yes</td></tr></tbody></table>
+  </div>
+ </div>
+ <div class="foot"><span>Abdelrhman Elhawarry &middot; ID 320210121</span><span>7 / 15</span></div>
+</section>
+
+<!-- 8 integration -->
+<section class="slide" data-notes="<b>0:45</b> The loop in five lines. First reading solvable: return it, nothing to correct. Otherwise search proposes, CSP tests, first solvable wins. If nothing works: unreadable plus the least confident cells.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; P7</span><span>Integration</span></div>
+ <h2 class="rv" style="--d:0">How the parts <em>cooperate</em></h2>
+ <div class="two w">
+  <pre class="rv" style="--d:1">read, p = network(image)
+if csp.solve(read).solved:
+    return solution              # nothing to correct
+for corrections in search(read, p, algo):
+    if csp.solve(apply(read, corrections)).solved:
+        return solution, corrections
+return "unreadable", least_confident_cells</pre>
+  <div class="col">
+   <div class="step rv" style="--d:2"><div class="n">1</div><div><b>Read</b> every cell, keep the probabilities</div></div>
+   <div class="step rv" style="--d:3"><div class="n">2</div><div><b>Check</b> with the CSP (AC-3 finds duplicates)</div></div>
+   <div class="step rv" style="--d:4"><div class="n">3</div><div><b>Correct</b> cheapest first, <b>test</b> each with the CSP</div></div>
+   <div class="step rv" style="--d:5"><div class="n">4</div><div><b>Report</b> the solution and the correction log</div></div>
+  </div>
+ </div>
+ <div class="foot"><span>Abdelrhman Elhawarry &middot; ID 320210121</span><span>8 / 15</span></div>
+</section>
+
+<!-- 9 exp1 -->
+<section class="slide" data-notes="<b>1:00</b> 5 seeds, 20 puzzles each, so 100 per level. A* and UCS have identical recovery and CSP calls, but A* expands about 7 times fewer nodes at 3 misreads. Greedy expands the fewest nodes but makes about twice as many CSP calls and recovers slightly less.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; P7</span><span>Experiment 1</span></div>
+ <h2 class="rv" style="--d:0">UCS vs Greedy vs A*: <em>same answer, fewer nodes</em></h2>
+ <div class="two" style="grid-template-columns:1fr 1fr 0.8fr;gap:22px;align-items:stretch">
+  <div class="glass rv" style="--d:1"><div class="muted" style="font-size:16px">Nodes expanded (log)</div><div class="legend" id="lg_a"></div><div class="chart" id="c_nodes"></div></div>
+  <div class="glass rv" style="--d:2"><div class="muted" style="font-size:16px">Exact recovery rate</div><div class="legend" id="lg_b"></div><div class="chart" id="c_rec"></div></div>
+  <div class="col" style="justify-content:center">
+   <div class="stat glass rv" style="--d:3"><small>Nodes at 3 misreads</small><b style="font-size:30px">91.9 / 12.7</b><i style="color:var(--muted)">UCS / A*</i></div>
+   <div class="stat glass rv" style="--d:4"><small>CSP calls at 3 misreads</small><b style="font-size:30px">3.5 vs 7.2</b><i style="color:var(--muted)">optimal vs Greedy</i></div>
+  </div>
+ </div>
+ <div class="foot"><span>Abdelrhman Elhawarry &middot; ID 320210121</span><span>9 / 15</span></div>
+</section>
+
+<!-- 10 exp2 -->
+<section class="slide" data-notes="<b>0:45</b> Static variable order to isolate the inference. At 30 givens FC cuts the assignments three-fold and AC-3 about seven-fold. On the sparse 25-given puzzles plain backtracking sometimes hits the 200,000 cap.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; P7</span><span>Experiment 2</span></div>
+ <h2 class="rv" style="--d:0">Forward checking and AC-3 <em>cut the work</em></h2>
+ <div class="two w">
+  <div class="glass rv" style="--d:1"><div class="legend" id="lg_c"></div><div class="chart" id="c_csp"></div></div>
+  <div class="col">
+   <div class="stat glass rv" style="--d:2"><small>30 givens, assignments</small><b style="font-size:34px">4,332 &rarr; 623</b><i>&minus;86% with FC + AC-3</i></div>
+   <div class="stat glass rv" style="--d:3"><small>25 givens, solved within the cap</small><b style="font-size:34px">92% &rarr; 98%</b><i>BT &rarr; BT + FC + AC-3</i></div>
+   <p class="rv muted" style="--d:4;font-size:17px">5 seeds &times; 10 puzzles per level, static variable order, 200,000-assignment cap.</p>
+  </div>
+ </div>
+ <div class="foot"><span>Abdelrhman Elhawarry &middot; ID 320210121</span><span>10 / 15</span></div>
+</section>
+
+<!-- 11 exp3 -->
+<section class="slide" data-notes="<b>0:45</b> Without correction the system never recovers a broken puzzle. Random correction only works for one misread. NN-guided correction recovers 96, 77 and 55 percent. The network's probabilities are what make the search effective.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; P7</span><span>Experiment 3</span></div>
+ <h2 class="rv" style="--d:0">The network is what makes <em>the search work</em></h2>
+ <div class="two w">
+  <div class="glass rv" style="--d:1"><div class="legend" id="lg_d"></div><div class="chart" id="c_nn"></div></div>
+  <div class="col">
+   <div class="stats" style="grid-template-columns:1fr 1fr">
+    <div class="stat glass rv" style="--d:2"><small>1 misread</small><b>0.96</b><i>random 0.23</i></div>
+    <div class="stat glass rv" style="--d:3"><small>3 misreads</small><b>0.55</b><i>random 0.00</i></div>
+   </div>
+   <ul class="bul" style="font-size:21px"><li class="rv" style="--d:4">No correction: <b>0.00</b> for 1&ndash;3 misreads</li><li class="rv" style="--d:5">Random corrections barely help</li></ul>
+  </div>
+ </div>
+ <div class="foot"><span>Abdelrhman Elhawarry &middot; ID 320210121</span><span>11 / 15</span></div>
+</section>
+
+<!-- 12 cases -->
+<section class="slide" data-notes="<b>0:45</b> Real runs of the pipeline with fixed seeds. Red struck-through digits are the misreads, green are the corrections. The amber case is the main limitation: a cheaper wrong correction also made the puzzle solvable.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; P7</span><span>Corrected cases</span></div>
+ <h2 class="rv" style="--d:0">Real runs, <em>real digits</em></h2>
+ <div class="cases3" id="s12"></div>
+ <div class="foot"><span>Abdelrhman Elhawarry &middot; ID 320210121</span><span>12 / 15</span></div>
+</section>
+
+<!-- 13 demo -->
+<section class="slide" data-notes="<b>5:00 live demo.</b> Run python run_demo.py --seed 3 --misreads 2 (or press Run in the desktop app). Show 1) the search trace: UCS expansions in cost order, 2) the CSP pruning with and without FC and AC-3: BT 8,244 assignments, BT+FC 2,290, BT+FC+AC-3 51, 3) the system with the network-guided correction on versus off: off says 'no solution', on recovers the puzzle. Then open the dashboard and the corrected cases.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; P7</span><span>Live demo &middot; 5 min</span></div>
+ <h2 class="rv" style="--d:0">Live <em>demo</em></h2>
+ <pre class="rv" style="--d:1;font-size:21px">python run_demo.py --seed 3 --misreads 2        # or press Run in SudokuReader.exe</pre>
+ <div class="demo">
+  <div class="glass rv" style="--d:2"><div class="step"><div class="n">1</div><b>Search trace</b></div><span>UCS expands correction sets in cost order until the CSP accepts one.</span></div>
+  <div class="glass rv" style="--d:3"><div class="step"><div class="n">2</div><b>CSP pruning</b></div><span>Same puzzle with BT, BT + FC and BT + FC + AC-3: assignments 8,244 &rarr; 2,290 &rarr; 51.</span></div>
+  <div class="glass rv" style="--d:4"><div class="step"><div class="n">3</div><b>Correction off vs on</b></div><span>Off: &ldquo;no solution&rdquo;. On: the exact puzzle is recovered.</span></div>
+ </div>
+ <div class="note rv" style="--d:5;border-color:var(--cyan);background:rgba(33,212,253,.08);color:#d6f6ff">Then: the dashboard (intro, corrected cases, charts) opens in the browser.</div>
+ <div class="foot"><span>Abdelrhman Elhawarry &middot; ID 320210121</span><span>13 / 15</span></div>
+</section>
+
+<!-- 14 limits + conclusion -->
+<section class="slide" data-notes="<b>0:45</b> Be honest about the limits: injected misreads, clean MNIST digits, and the goal 'solvable' accepts the cheapest solvable puzzle, not always the written one. The unique-solution goal raised recovery from 72% to 88% in a diagnostic run. Conclude: probabilities, search and constraints compensate for each other.">
+ <div class="sh"><span><b>Sudoku Reader</b> &middot; P7</span><span>Limits and conclusions</span></div>
+ <h2 class="rv" style="--d:0">What works, and <em>what does not yet</em></h2>
+ <div class="two" style="align-items:start">
+  <div class="glass col rv" style="--d:1"><b style="font-size:24px;color:var(--green)">Conclusions</b>
+   <ul class="bul" style="font-size:21px">
+    <li>Recovery 0.96 / 0.77 / 0.55 for 1 / 2 / 3 misreads, 0.00 without correction</li>
+    <li>A* = UCS quality with far fewer nodes</li>
+    <li>FC + AC-3 cut CSP work by up to 86%</li></ul></div>
+  <div class="glass col rv" style="--d:2"><b style="font-size:24px;color:var(--amber)">Limitations</b>
+   <ul class="bul" style="font-size:21px">
+    <li>Misreads are injected; MNIST digits are cleaner than real handwriting</li>
+    <li>&ldquo;Solvable&rdquo; accepts a cheaper wrong puzzle (the unique-solution goal helps: 72% &rarr; 88% in a diagnostic run)</li>
+    <li>5 seeds &times; 20 puzzles: large variance</li></ul></div>
+ </div>
+ <div class="foot"><span>Abdelrhman Elhawarry &middot; ID 320210121</span><span>14 / 15</span></div>
+</section>
+
+<!-- 15 thanks -->
+<section class="slide" style="justify-content:center;align-items:flex-start" data-notes="<b>Questions.</b> Be ready for: why are probabilities used as costs, why is h admissible, why static variable order in Experiment 2, how the misreads are injected, what the unique-solution goal changes.">
+ <div class="rv" style="--d:0;font-size:16px;letter-spacing:.32em;font-weight:800;color:var(--cyan)">THANK YOU</div>
+ <h1 class="rv" style="--d:1">Questions?</h1>
+ <div class="rv" style="--d:2;display:flex;flex-direction:column;gap:4px"><b style="font-size:32px">Abdelrhman Elhawarry</b><span class="muted" style="font-size:22px">Student ID 320210121 &middot; Project P7: Handwritten Sudoku Reader and Solver</span></div>
+ <div class="rv" style="--d:3;display:flex;gap:10px;flex-wrap:wrap;margin-top:8px"><span class="tag">Code, report and dashboard in the repository</span><span class="tag">python run_demo.py</span></div>
+</section>
+
+</div></div>
+<div id="bar"></div>
+<div id="hud"><kbd>&larr;</kbd><kbd>&rarr;</kbd> navigate &nbsp; <kbd>N</kbd> notes &nbsp; <kbd>F</kbd> fullscreen</div>
+<div id="notes"></div>
+
+<script>
+const D={"exp1": [{"misreads": "0", "algorithm": "UCS", "nodes expanded": [0.0, 0.0], "nodes generated": [0.0, 0.0], "CSP calls": [0.0, 0.0], "exact recovery rate": [1.0, 0.0]}, {"misreads": "0", "algorithm": "GREEDY", "nodes expanded": [0.0, 0.0], "nodes generated": [0.0, 0.0], "CSP calls": [0.0, 0.0], "exact recovery rate": [1.0, 0.0]}, {"misreads": "0", "algorithm": "ASTAR", "nodes expanded": [0.0, 0.0], "nodes generated": [0.0, 0.0], "CSP calls": [0.0, 0.0], "exact recovery rate": [1.0, 0.0]}, {"misreads": "1", "algorithm": "UCS", "nodes expanded": [5.08, 1.39], "nodes generated": [106.03, 28.63], "CSP calls": [1.76, 0.47], "exact recovery rate": [0.93, 0.045]}, {"misreads": "1", "algorithm": "GREEDY", "nodes expanded": [2.31, 0.16], "nodes generated": [25.24, 2.41], "CSP calls": [1.58, 0.23], "exact recovery rate": [0.94, 0.042]}, {"misreads": "1", "algorithm": "ASTAR", "nodes expanded": [2.54, 0.54], "nodes generated": [28.66, 7.8], "CSP calls": [1.76, 0.47], "exact recovery rate": [0.93, 0.045]}, {"misreads": "2", "algorithm": "UCS", "nodes expanded": [18.66, 7.27], "nodes generated": [391.71, 133.22], "CSP calls": [2.25, 0.54], "exact recovery rate": [0.73, 0.12]}, {"misreads": "2", "algorithm": "GREEDY", "nodes expanded": [4.33, 1.08], "nodes generated": [50.63, 10.83], "CSP calls": [3.03, 1.22], "exact recovery rate": [0.66, 0.139]}, {"misreads": "2", "algorithm": "ASTAR", "nodes expanded": [4.99, 0.62], "nodes generated": [64.93, 9.77], "CSP calls": [2.25, 0.54], "exact recovery rate": [0.73, 0.12]}, {"misreads": "3", "algorithm": "UCS", "nodes expanded": [91.9, 37.22], "nodes generated": [1590.23, 524.1], "CSP calls": [3.52, 0.97], "exact recovery rate": [0.71, 0.082]}, {"misreads": "3", "algorithm": "GREEDY", "nodes expanded": [9.17, 2.93], "nodes generated": [110.13, 33.86], "CSP calls": [7.18, 2.87], "exact recovery rate": [0.64, 0.143]}, {"misreads": "3", "algorithm": "ASTAR", "nodes expanded": [12.72, 3.05], "nodes generated": [172.82, 34.95], "CSP calls": [3.52, 0.97], "exact recovery rate": [0.71, 0.082]}, {"misreads": "4", "algorithm": "UCS", "nodes expanded": [488.67, 523.42], "nodes generated": [3675.2, 1614.81], "CSP calls": [4.8, 2.01], "exact recovery rate": [0.42, 0.148]}, {"misreads": "4", "algorithm": "GREEDY", "nodes expanded": [52.06, 81.27], "nodes generated": [148.38, 105.85], "CSP calls": [12.14, 8.22], "exact recovery rate": [0.34, 0.119]}, {"misreads": "4", "algorithm": "ASTAR", "nodes expanded": [59.78, 74.84], "nodes generated": [366.64, 131.94], "CSP calls": [4.8, 2.01], "exact recovery rate": [0.42, 0.148]}], "exp2": [{"givens": "25", "method": "BT", "assignments": [48211.0, 22266.0], "backtracks": [48158.0, 22267.0], "time (s)": [0.2136, 0.0993], "solved within 200000 assignments": [0.92, 0.04]}, {"givens": "25", "method": "BT+FC", "assignments": [19313.0, 7017.0], "backtracks": [12153.0, 4184.0], "time (s)": [0.0722, 0.0248], "solved within 200000 assignments": [0.96, 0.05]}, {"givens": "25", "method": "BT+FC+AC-3", "assignments": [17014.0, 5745.0], "backtracks": [11013.0, 3515.0], "time (s)": [0.0699, 0.0232], "solved within 200000 assignments": [0.98, 0.04]}, {"givens": "30", "method": "BT", "assignments": [4332.0, 2519.0], "backtracks": [4281.0, 2519.0], "time (s)": [0.0185, 0.0107], "solved within 200000 assignments": [1.0, 0.0]}, {"givens": "30", "method": "BT+FC", "assignments": [1340.0, 837.0], "backtracks": [846.0, 541.0], "time (s)": [0.0054, 0.0033], "solved within 200000 assignments": [1.0, 0.0]}, {"givens": "30", "method": "BT+FC+AC-3", "assignments": [623.0, 319.0], "backtracks": [394.0, 222.0], "time (s)": [0.0048, 0.0013], "solved within 200000 assignments": [1.0, 0.0]}, {"givens": "35", "method": "BT", "assignments": [576.0, 226.0], "backtracks": [530.0, 226.0], "time (s)": [0.0027, 0.0011], "solved within 200000 assignments": [1.0, 0.0]}, {"givens": "35", "method": "BT+FC", "assignments": [200.0, 53.0], "backtracks": [105.0, 37.0], "time (s)": [0.0011, 0.0003], "solved within 200000 assignments": [1.0, 0.0]}, {"givens": "35", "method": "BT+FC+AC-3", "assignments": [80.0, 34.0], "backtracks": [24.0, 26.0], "time (s)": [0.0037, 0.0017], "solved within 200000 assignments": [1.0, 0.0]}], "exp3": [{"misreads": "0", "method": "NN-guided (UCS)", "exact recovery rate": [1.0, 0.0]}, {"misreads": "0", "method": "no correction", "exact recovery rate": [1.0, 0.0]}, {"misreads": "0", "method": "random correction", "exact recovery rate": [1.0, 0.0]}, {"misreads": "1", "method": "NN-guided (UCS)", "exact recovery rate": [0.96, 0.055]}, {"misreads": "1", "method": "no correction", "exact recovery rate": [0.0, 0.0]}, {"misreads": "1", "method": "random correction", "exact recovery rate": [0.23, 0.076]}, {"misreads": "2", "method": "NN-guided (UCS)", "exact recovery rate": [0.77, 0.157]}, {"misreads": "2", "method": "no correction", "exact recovery rate": [0.0, 0.0]}, {"misreads": "2", "method": "random correction", "exact recovery rate": [0.0, 0.0]}, {"misreads": "3", "method": "NN-guided (UCS)", "exact recovery rate": [0.55, 0.071]}, {"misreads": "3", "method": "no correction", "exact recovery rate": [0.0, 0.0]}, {"misreads": "3", "method": "random correction", "exact recovery rate": [0.0, 0.0]}], "nn": {"logreg": {"test_acc": 0.923059866962306, "ece_before": 0.01609768300191265}, "mlp": {"test_acc": 0.9780487804878049, "ece_before": 0.007826282090596232, "temperature": 1.35, "ece_after_temperature_scaling": 0.0036883177785016906, "test_acc_after": 0.9780487804878049, "confusion_matrix": [[1127, 3, 0, 0, 1, 2, 1, 1, 0], [0, 1009, 8, 3, 0, 2, 7, 3, 0], [0, 0, 992, 0, 4, 0, 6, 3, 5], [0, 5, 1, 964, 0, 2, 1, 2, 7], [0, 0, 9, 0, 877, 5, 1, 0, 0], [2, 2, 1, 9, 3, 939, 0, 2, 0], [6, 9, 3, 2, 0, 0, 1004, 0, 4], [1, 5, 9, 6, 8, 5, 2, 932, 6], [6, 0, 6, 9, 3, 1, 6, 0, 978]]}}, "student": {"name": "Abdelrhman Elhawarry", "id": "320210121", "project": "Handwritten Sudoku Reader and Solver", "code": "P7"}, "digits": {"1": "data:image/png;base64,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", "2": "data:image/png;base64,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", "3": "data:image/png;base64,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", "4": "data:image/png;base64,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", "5": "data:image/png;base64,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", "6": "data:image/png;base64,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", "7": "data:image/png;base64,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", "8": "data:image/png;base64,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", "9": "data:image/png;base64,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"}, "cases": [{"seed": 11, "misreads": 1, "read": [0, 3, 0, 0, 1, 0, 0, 5, 0, 2, 0, 0, 0, 0, 9, 0, 3, 6, 0, 0, 4, 3, 0, 0, 0, 0, 1, 0, 0, 0, 0, 3, 0, 4, 0, 9, 0, 0, 0, 5, 2, 0, 3, 0, 7, 0, 0, 0, 0, 9, 7, 1, 0, 0, 0, 7, 2, 0, 4, 0, 0, 0, 0, 4, 6, 0, 0, 0, 5, 0, 0, 0, 0, 8, 0, 0, 7, 0, 0, 6, 3], "final": [0, 3, 0, 0, 1, 0, 0, 5, 0, 2, 0, 0, 0, 0, 9, 0, 3, 6, 0, 0, 4, 3, 0, 0, 0, 0, 1, 0, 0, 0, 0, 3, 0, 6, 0, 9, 0, 0, 0, 5, 2, 0, 3, 0, 7, 0, 0, 0, 0, 9, 7, 1, 0, 0, 0, 7, 2, 0, 4, 0, 0, 0, 0, 4, 6, 0, 0, 0, 5, 0, 0, 0, 0, 8, 0, 0, 7, 0, 0, 6, 3], "status": "solved", "exact": true, "cost": 0.2949261958741785, "expanded": 2, "generated": 31, "csp_calls": 2, "corrections": [[33, 4, 6, 0.2949261958741785]]}, {"seed": 12, "misreads": 1, "read": [0, 0, 3, 9, 0, 0, 0, 8, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 8, 0, 0, 1, 0, 0, 0, 3, 3, 0, 0, 0, 9, 6, 7, 0, 4, 7, 0, 4, 2, 0, 0, 8, 5, 0, 0, 0, 6, 0, 0, 0, 0, 2, 0, 6, 0, 5, 7, 0, 8, 0, 4, 0, 0, 0, 1, 0, 2, 0, 6, 0, 0, 4, 2, 0, 0, 0, 0, 0, 0, 0], "final": [0, 0, 3, 9, 0, 0, 0, 8, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 8, 0, 0, 1, 0, 0, 0, 3, 3, 0, 0, 0, 9, 6, 7, 0, 4, 7, 0, 4, 2, 0, 0, 8, 5, 0, 0, 0, 6, 0, 0, 0, 0, 2, 0, 6, 0, 5, 1, 0, 8, 0, 4, 0, 0, 0, 1, 0, 2, 0, 6, 0, 0, 4, 2, 0, 0, 0, 0, 0, 0, 0], "status": "solved", "exact": true, "cost": 0.32018090344230143, "expanded": 2, "generated": 31, "csp_calls": 2, "corrections": [[57, 7, 1, 0.32018090344230143]]}, {"seed": 21, "misreads": 2, "read": [0, 0, 0, 1, 0, 0, 0, 7, 3, 0, 1, 0, 0, 0, 7, 8, 0, 0, 5, 0, 0, 6, 0, 0, 4, 0, 3, 0, 5, 4, 0, 6, 0, 0, 0, 9, 6, 0, 0, 3, 0, 0, 5, 4, 0, 7, 0, 2, 0, 0, 5, 0, 0, 6, 9, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 4, 7, 0, 0, 0, 1, 0, 0, 7, 0, 6, 0, 0, 3, 0], "final": [0, 0, 0, 1, 0, 0, 0, 7, 3, 0, 1, 0, 0, 0, 7, 8, 0, 0, 5, 0, 0, 6, 0, 0, 4, 0, 2, 0, 5, 4, 0, 1, 0, 0, 0, 9, 6, 0, 0, 3, 0, 0, 5, 4, 0, 7, 0, 2, 0, 0, 5, 0, 0, 6, 9, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 4, 7, 0, 0, 0, 1, 0, 0, 7, 0, 6, 0, 0, 3, 0], "status": "solved", "exact": true, "cost": 5.13976731005884, "expanded": 18, "generated": 416, "csp_calls": 1, "corrections": [[26, 3, 2, 1.806655858287061], [31, 6, 1, 3.3331114517717793]]}, {"seed": 22, "misreads": 2, "read": [0, 0, 0, 0, 4, 7, 0, 0, 8, 4, 8, 0, 0, 6, 0, 1, 7, 0, 0, 0, 3, 2, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 6, 1, 0, 0, 4, 1, 0, 3, 9, 0, 0, 0, 3, 0, 0, 3, 0, 5, 0, 6, 1, 0, 0, 7, 0, 0, 0, 8, 0, 0, 6, 2, 8, 0, 0, 1, 4, 0, 0], "final": [0, 0, 0, 0, 4, 7, 0, 0, 8, 4, 8, 0, 0, 6, 0, 1, 7, 0, 0, 0, 3, 2, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 6, 1, 0, 0, 4, 1, 0, 3, 9, 0, 0, 0, 3, 0, 0, 8, 0, 5, 0, 6, 1, 0, 0, 7, 0, 0, 0, 8, 0, 0, 6, 2, 8, 0, 0, 1, 4, 0, 0], "status": "solved", "exact": false, "cost": 0.01793992433480943, "expanded": 2, "generated": 31, "csp_calls": 1, "corrections": [[57, 3, 8, 0.01793992433480943]]}, {"seed": 31, "misreads": 3, "read": [0, 0, 8, 6, 0, 1, 2, 4, 0, 0, 0, 0, 9, 0, 0, 9, 0, 0, 0, 0, 5, 2, 7, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 6, 2, 9, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 6, 1, 0, 0, 3, 0, 0, 0, 0, 9, 0, 4, 0, 0, 0, 7, 0, 0, 0, 7, 0, 0, 8, 9, 8, 0, 7, 2, 0, 9, 0, 0, 0, 3], "final": [0, 0, 8, 6, 0, 1, 2, 4, 0, 0, 0, 0, 4, 0, 0, 9, 0, 0, 0, 0, 5, 2, 7, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 6, 2, 9, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 6, 1, 0, 0, 3, 0, 0, 0, 0, 9, 0, 4, 0, 0, 0, 7, 0, 0, 0, 7, 0, 0, 6, 9, 8, 0, 7, 2, 0, 9, 0, 0, 0, 3], "status": "solved", "exact": false, "cost": 3.0943398775414517, "expanded": 22, "generated": 512, "csp_calls": 1, "corrections": [[12, 9, 4, 0.7628627395554843], [69, 8, 6, 2.331477137985967]]}, {"seed": 32, "misreads": 3, "read": [0, 4, 3, 0, 0, 8, 7, 0, 9, 0, 9, 0, 1, 0, 0, 0, 0, 8, 2, 5, 0, 0, 0, 2, 0, 3, 0, 9, 8, 5, 0, 0, 0, 6, 4, 8, 0, 0, 0, 8, 0, 9, 0, 0, 3, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 7, 9, 0, 0, 5, 0, 0, 9, 0, 0, 0, 0, 0, 7, 0, 0, 0, 8, 6, 0, 0, 0], "final": [0, 4, 3, 0, 0, 8, 1, 0, 9, 0, 9, 0, 1, 0, 0, 0, 0, 8, 1, 5, 0, 0, 0, 2, 0, 3, 0, 9, 8, 5, 0, 0, 0, 6, 4, 1, 0, 0, 0, 8, 0, 9, 0, 0, 3, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 7, 9, 0, 0, 5, 0, 0, 9, 0, 0, 0, 0, 0, 7, 0, 0, 0, 8, 6, 0, 0, 0], "status": "solved", "exact": true, "cost": 4.811329381930353, "expanded": 27, "generated": 613, "csp_calls": 2, "corrections": [[6, 7, 1, 0.32018090344230143], [18, 2, 1, 3.200313570264606], [35, 8, 1, 1.2908349082234456]]}]};
+/* ---- shared static drawing code for the report and the slides (no animation) ---- */
+const SVGNS='http://www.w3.org/2000/svg';
+const COL=['#3d8bff','#21d4fd','#a78bfa'];
+const NM={UCS:'UCS',GREEDY:'Greedy',ASTAR:'A*'};
+const REC='exact recovery rate';
+const $=id=>document.getElementById(id);
+const M=x=>Array.isArray(x)?x[0]:x,S=x=>Array.isArray(x)?x[1]:0;
+const f1=x=>x.toFixed(1),f2=x=>x.toFixed(2),f3=x=>x.toFixed(3),f4=x=>x.toFixed(4),fi=x=>Math.round(x).toLocaleString('en-US');
+const find=(t,o)=>t&&t.find(r=>Object.keys(o).every(k=>String(r[k])===String(o[k])));
+function el(t,a,p){const e=document.createElementNS(SVGNS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+function div(c,p){const d=document.createElement('div');d.className=c;if(p)p.appendChild(d);return d}
+
+/* digits: one real MNIST image per digit, used as a CSS mask */
+if(D.digits){let css='';for(const n in D.digits)css+=`.dg${n}{-webkit-mask-image:url(${D.digits[n]});mask-image:url(${D.digits[n]})}`;
+ const st=document.createElement('style');st.textContent=css;document.head.appendChild(st)}
+
+/* a board in its final (corrected) state; mode 'read' shows the wrong digits in red instead */
+function board(host,read,final,mode){
+ const bad=new Set();for(let k=0;k<81;k++)if(read[k]&&final[k]!==read[k])bad.add(k);
+ const text=!D.digits,dg=(n,c)=>text?`<div class="dg t ${c}">${n}</div>`:`<div class="dg dg${n} ${c}"></div>`;
+ let lines='';for(let i=0;i<=9;i++){const w=i%3?.22:.7;lines+=`<line x1="${i*10}" y1="0" x2="${i*10}" y2="90" stroke-width="${w}"/><line x1="0" y1="${i*10}" x2="90" y2="${i*10}" stroke-width="${w}"/>`}
+ let cells='';for(let k=0;k<81;k++){
+  if(!read[k]){cells+='<div class="ic"></div>';continue}
+  const b=bad.has(k);
+  if(!b)cells+=`<div class="ic">${dg(read[k],'')}</div>`;
+  else if(mode==='read')cells+=`<div class="ic">${dg(read[k],'mis')}</div>`;
+  else cells+=`<div class="ic">${dg(final[k],'right')}<i class="was">${read[k]}</i></div>`}
+ host.classList.add('i-board');host.innerHTML=`<svg viewBox="0 0 90 90">${lines}</svg><div class="i-cells">${cells}</div>`}
+
+/* ---- charts ---- */
+function frame(host,h){host.innerHTML='';const W=Math.max(280,host.clientWidth||520),m={t:14,r:14,b:34,l:46};
+ const s=el('svg',{viewBox:`0 0 ${W} ${h}`});host.appendChild(s);const defs=el('defs',{},s);
+ return{W,H:h,m,iw:W-m.l-m.r,ih:h-m.t-m.b,s,defs,g:el('g',{transform:`translate(${m.l},${m.t})`},s),id:host.id||('c'+Math.random().toString(36).slice(2,7))}}
+function yscale(f,log,lo,hi){
+ if(log){const A=Math.floor(Math.log10(lo*.7)),B=Math.ceil(Math.log10(hi*1.2));return{log:1,lo:10**A,hi:10**B,fn:v=>f.ih-(Math.log10(Math.max(v,10**A))-A)/(B-A)*f.ih}}
+ return{log:0,lo:0,hi,fn:v=>f.ih-v/hi*f.ih}}
+function ticks(y){if(y.log){const r=[];for(let p=Math.round(Math.log10(y.lo));p<=Math.round(Math.log10(y.hi));p++)r.push(10**p);return r}
+ const st=y.hi<=1.5?.25:Math.ceil(y.hi/5),r=[];for(let v=0;v<=y.hi+1e-9;v+=st)r.push(v);return r}
+const tlab=v=>v>=1e6?v/1e6+'M':v>=1000?v/1000+'k':String(+v.toFixed(2));
+function axes(f,y,xt,xl){
+ ticks(y).forEach(v=>{const yy=y.fn(v);el('line',{x1:0,x2:f.iw,y1:yy,y2:yy,class:'grd'},f.g);
+  const t=el('text',{x:-8,y:yy+4,'text-anchor':'end',class:'axt'},f.g);t.textContent=tlab(v)});
+ xt.forEach(([x,l])=>{const t=el('text',{x,y:f.ih+18,'text-anchor':'middle',class:'axt'},f.g);t.textContent=l});
+ if(xl){const t=el('text',{x:f.iw/2,y:f.ih+31,'text-anchor':'middle',class:'axt'},f.g);t.textContent=xl}}
+function mono(P){const n=P.length;if(n<3)return P.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join('');
+ const dx=[],dy=[],m=[],t=[];for(let i=0;i<n-1;i++){dx[i]=P[i+1][0]-P[i][0];dy[i]=P[i+1][1]-P[i][1];m[i]=dy[i]/dx[i]}
+ t[0]=m[0];t[n-1]=m[n-2];for(let i=1;i<n-1;i++)t[i]=m[i-1]*m[i]<=0?0:(m[i-1]+m[i])/2;
+ for(let i=0;i<n-1;i++){if(m[i]===0){t[i]=t[i+1]=0}else{const a=t[i]/m[i],b=t[i+1]/m[i],s=a*a+b*b;if(s>9){const k=3/Math.sqrt(s);t[i]=k*a*m[i];t[i+1]=k*b*m[i]}}}
+ let d='M'+P[0][0]+' '+P[0][1];for(let i=0;i<n-1;i++){const h=dx[i]/3;d+=`C${P[i][0]+h} ${P[i][1]+t[i]*h} ${P[i+1][0]-h} ${P[i+1][1]-t[i+1]*h} ${P[i+1][0]} ${P[i+1][1]}`}return d}
+function legendTo(id,items){const h=$(id);if(!h)return;h.innerHTML='';items.forEach(([n,c])=>{const s=document.createElement('span');s.innerHTML=`<i style="background:${c}"></i>${n}`;h.appendChild(s)})}
+function lineChart(host,series,o){
+ const all=series.flatMap(s=>s.p),f=frame(host,o.h||250),xs=[...new Set(all.map(p=>p.x))].sort((a,b)=>a-b);
+ const x=v=>(v-xs[0])/(xs[xs.length-1]-xs[0])*f.iw,y=yscale(f,o.log,Math.min(...all.map(p=>p.y)),o.log?Math.max(...all.map(p=>p.y+p.sd)):1.05);
+ axes(f,y,xs.map(v=>[x(v),String(v)]),o.xl);
+ series.forEach((s,si)=>{const gid=f.id+'g'+si,g=el('linearGradient',{id:gid,x1:0,y1:0,x2:0,y2:1},f.defs);
+  el('stop',{offset:0,'stop-color':s.c,'stop-opacity':.34},g);el('stop',{offset:1,'stop-color':s.c,'stop-opacity':0},g);
+  const P=s.p.map(p=>[x(p.x),y.fn(p.y)]),d=mono(P);
+  if(!s.dash)el('path',{d:d+`L${P[P.length-1][0]} ${f.ih}L${P[0][0]} ${f.ih}Z`,fill:`url(#${gid})`},f.g);
+  el('path',{d,fill:'none',stroke:s.c,'stroke-width':s.dash?1.8:2.6,'stroke-linecap':'round','stroke-dasharray':s.dash?'6 5':''},f.g);
+  s.p.forEach(p=>{el('line',{x1:x(p.x),x2:x(p.x),y1:y.fn(Math.max(y.lo,p.y-p.sd)),y2:y.fn(Math.min(y.hi,p.y+p.sd)),stroke:s.c,'stroke-opacity':.45,'stroke-width':1.4},f.g);
+   el('circle',{cx:x(p.x),cy:y.fn(p.y),r:4,fill:'#0a1240',stroke:s.c,'stroke-width':2.2},f.g)})})}
+function barChart(host,groups,names,o){
+ const f=frame(host,o.h||250),all=groups.flatMap(g=>g.b);
+ const y=yscale(f,o.log,Math.min(...all.map(b=>b.y)),o.log?Math.max(...all.map(b=>b.y+b.sd)):1.1),gw=f.iw/groups.length,bw=gw*.78/names.length;
+ axes(f,y,groups.map((g,i)=>[gw*(i+.5),g.l]),o.xl);
+ names.forEach((n,i)=>{const g=el('linearGradient',{id:f.id+'b'+i,x1:0,y1:0,x2:0,y2:1},f.defs);
+  el('stop',{offset:0,'stop-color':COL[i]},g);el('stop',{offset:1,'stop-color':COL[i],'stop-opacity':.2},g)});
+ groups.forEach((g,gi)=>g.b.forEach((b,i)=>{const bx=gw*gi+gw*.11+i*bw,top=y.fn(Math.min(b.y,y.hi));
+  el('rect',{x:bx+1.5,y:top,width:Math.max(4,bw-3),height:Math.max(2,f.ih-top),rx:Math.min(6,(bw-3)/2),fill:`url(#${f.id}b${i})`},f.g);
+  const cx=bx+bw/2;el('line',{x1:cx,x2:cx,y1:y.fn(Math.max(y.lo,b.y-b.sd)),y2:y.fn(Math.min(y.hi,b.y+b.sd)),stroke:'#fff','stroke-opacity':.55,'stroke-width':1.1},f.g);
+  if(o.lab&&b.y>0&&(i===0||b.y<.99)){const t=el('text',{x:cx,y:y.fn(Math.min(y.hi,b.y+b.sd))-4,class:'vl'},f.g);t.textContent=o.f(b.y)}}))}
+
+/* ready-made charts used by both documents */
+const SER=(key)=>['UCS','GREEDY','ASTAR'].map((a,i)=>({n:NM[a],c:COL[i],dash:a=='ASTAR',p:D.exp1.filter(r=>r.algorithm==a&&(key!='nodes expanded'||+r.misreads>0)).map(r=>({x:+r.misreads,y:M(r[key]),sd:S(r[key])}))}));
+function chartNodes(id,h){lineChart($(id),SER('nodes expanded'),{log:1,xl:'injected misreads',h})}
+function chartRecovery(id,h){lineChart($(id),SER(REC),{log:0,xl:'injected misreads',h})}
+function chartCsp(id,h){const nm=['BT','BT+FC','BT+FC+AC-3'];
+ barChart($(id),[25,30,35].map(v=>({l:v+' givens',b:nm.map(n=>{const r=find(D.exp2,{givens:v,method:n}).assignments;return{y:M(r),sd:S(r)}})})),nm,{log:1,f:fi,xl:'puzzle difficulty',h})}
+function chartNN(id,h){const nm=['NN-guided (UCS)','no correction','random correction'];
+ barChart($(id),[0,1,2,3].map(v=>({l:v+(v==1?' misread':' misreads'),b:nm.map(n=>{const r=find(D.exp3,{misreads:v,method:n})[REC];return{y:M(r),sd:S(r)}})})),nm,{log:0,lab:1,f:f2,xl:'injected misreads',h})}
+function confusion(host,Mx){host.innerHTML='';const n=9,c=26,W=n*c+30,s=el('svg',{viewBox:`0 0 ${W} ${n*c+30}`},host),mx=Math.max(...Mx.flat().map((v,i)=>(Math.floor(i/n)==i%n?0:v)),1);
+ for(let i=0;i<n;i++)for(let j=0;j<n;j++){const v=Mx[i][j],on=i===j,a=on?.28:Math.min(1,.18+v/mx*.82);
+  el('rect',{x:24+j*c,y:i*c,width:c-2,height:c-2,rx:4,fill:on?'#01b574':'#f0605d','fill-opacity':v?a:.05},s);
+  const t=el('text',{x:24+j*c+c/2-1,y:i*c+c/2+3,'text-anchor':'middle',class:'axt'},s);t.style.fill='#fff';t.style.fontSize='9px';t.textContent=v}
+ for(let i=0;i<n;i++){let t=el('text',{x:24+i*c+c/2-1,y:n*c+12,'text-anchor':'middle',class:'axt'},s);t.textContent=i+1;
+  t=el('text',{x:16,y:i*c+c/2+3,'text-anchor':'end',class:'axt'},s);t.textContent=i+1}
+ let t=el('text',{x:24+n*c/2,y:n*c+26,'text-anchor':'middle',class:'axt'},s);t.textContent='predicted';
+ t=el('text',{x:6,y:n*c/2,'text-anchor':'middle',class:'axt',transform:`rotate(-90 6 ${n*c/2})`},s);t.textContent='true'}
+
+const C=D.cases,slides=[...document.querySelectorAll('.slide')];
+/* diagrams */
+(function(){const s=$('arch'),defs=el('defs',{},s);
+ const g=el('linearGradient',{id:'ag',x1:0,y1:0,x2:1,y2:1},defs);el('stop',{offset:0,'stop-color':'#0075ff'},g);el('stop',{offset:1,'stop-color':'#21d4fd'},g);
+ const mk=el('marker',{id:'ar',viewBox:'0 0 10 10',refX:8,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'},defs);el('path',{d:'M0 0L10 5L0 10z',fill:'#8fb4ff'},mk);
+ const bx=[['Handwritten mosaic','9 x 9 digit images',20],['Neural network','digit probabilities',150],['AC-3 check','duplicate givens?',280],['Search','UCS / Greedy / A*',410],['CSP solver','BT + FC + AC-3',540]];
+ bx.forEach(([a,b,x],i)=>{el('rect',{x,y:50,width:120,height:62,rx:14,fill:'rgba(15,24,70,.9)',stroke:i==3?'#a78bfa':i==4?'#01b574':'url(#ag)','stroke-width':1.6},s);
+  let t=el('text',{x:x+60,y:76,'text-anchor':'middle',fill:'#fff','font-size':12,'font-weight':700},s);t.textContent=a;
+  t=el('text',{x:x+60,y:95,'text-anchor':'middle',fill:'#a0aec0','font-size':10},s);t.textContent=b;
+  if(i<4)el('path',{d:`M${x+122} 81H${x+148}`,stroke:'#8fb4ff','stroke-width':1.6,fill:'none','marker-end':'url(#ar)'},s)});
+ el('path',{d:'M600 114V160H470V114',stroke:'#f0605d','stroke-width':1.6,fill:'none','stroke-dasharray':'5 4','marker-end':'url(#ar)'},s);
+ let t=el('text',{x:535,y:176,'text-anchor':'middle',fill:'#f0605d','font-size':10.5,'font-weight':700},s);t.textContent='CSP fails: try the next cheapest corrections';
+ t=el('text',{x:340,y:136,'text-anchor':'middle',fill:'#a0aec0','font-size':10},s);t.textContent='solvable: done';
+ el('path',{d:'M340 114V126',stroke:'#01b574','stroke-width':1.4,fill:'none'},s);
+ t=el('text',{x:340,y:30,'text-anchor':'middle',fill:'#01b574','font-size':11,'font-weight':700},s);t.textContent='solution + correction log, or "unreadable" with the least confident cells';
+ el('path',{d:'M600 46V36H345',stroke:'#01b574','stroke-width':1.4,fill:'none','marker-end':'url(#ar)'},s)})();
+const e=C[2]||C[0];
+board($('s1board'),e.read,e.final,'fixed');board($('s2board'),e.read,e.final,'read');board($('s4a'),e.read,e.final,'read');board($('s4b'),e.read,e.final,'fixed');
+function boot(){
+ chartNodes('c_nodes',330);chartRecovery('c_rec',330);chartCsp('c_csp',330);chartNN('c_nn',330);
+ legendTo('lg_a',SER(REC).map(s=>[s.n,s.c]));legendTo('lg_b',SER(REC).map(s=>[s.n,s.c]));
+ const nm2=['BT','BT+FC','BT+FC+AC-3'],nm3=['NN-guided (UCS)','no correction','random correction'];
+ legendTo('lg_c',nm2.map((n,i)=>[n,COL[i]]));legendTo('lg_d',nm3.map((n,i)=>[n,COL[i]]));
+ confusion($('cm'),D.nn.mlp.confusion_matrix);
+ const pick=[C.findIndex(c=>c.exact&&c.misreads===1),C.findIndex(c=>c.exact&&c.misreads>=2),C.findIndex(c=>!c.exact)],idx=[...new Set(pick.filter(i=>i>=0))];
+ [...C.keys()].forEach(i=>{if(idx.length<3&&!idx.includes(i))idx.push(i)});
+ idx.slice(0,3).forEach((i,j)=>{const c=C[i],card=div('glass ccard rv',$('s12'));card.style.setProperty('--d',j+1);
+  const b=div('bd',card);board(b,c.read,c.final,'fixed');
+  const kind=c.exact?['ok','Exact solution recovered']:c.status==='solved'?['warn','Valid, but a different puzzle']:['badc','Unreadable'];
+  const log=c.corrections.map(w=>`<div class="logl">row ${Math.floor(w[0]/9)+1}, col ${w[0]%9+1}: <i>${w[1]}</i> &rarr; <em>${w[2]}</em></div>`).join('');
+  card.insertAdjacentHTML('beforeend',`<b>Case ${i+1} &middot; ${c.misreads} misread${c.misreads==1?'':'s'}</b><span class="chip ${kind[0]}">${kind[1]}</span><span>cost ${c.cost.toFixed(2)} &middot; ${c.expanded} expanded</span>${log}`)});
+}
+/* navigation */
+let cur=0;const bar=$('bar'),notes=$('notes'),stage=$('stage'),print=location.search.includes('print')||/[?&]s=\d+/.test(location.search);
+function fit(){const k=Math.min(innerWidth/1280,innerHeight/720);stage.style.transform=`scale(${k})`}
+function go(n){cur=Math.max(0,Math.min(slides.length-1,n));slides.forEach((s,i)=>s.classList.toggle('active',i===cur));
+ bar.style.width=((cur+1)/slides.length*100)+'%';notes.innerHTML='<b>Slide '+(cur+1)+' of '+slides.length+'</b> &nbsp; '+(slides[cur].dataset.notes||'');
+ history.replaceState(null,'','#'+(cur+1))}
+addEventListener('keydown',ev=>{const k=ev.key;
+ if(['ArrowRight','PageDown',' ','Enter'].includes(k)){ev.preventDefault();go(cur+1)}
+ else if(['ArrowLeft','PageUp','Backspace'].includes(k)){ev.preventDefault();go(cur-1)}
+ else if(k==='Home')go(0);else if(k==='End')go(slides.length-1);
+ else if(k==='n'||k==='N')notes.classList.toggle('on');
+ else if(k==='f'||k==='F'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()}});
+addEventListener('click',ev=>{if(ev.target.closest('#notes'))return;go(ev.clientX<innerWidth*.3?cur-1:cur+1)});
+addEventListener('resize',fit);
+if(print){document.body.classList.add('print');const so=(location.search.match(/[?&]s=(\d+)/)||[])[1];slides.forEach((s,i)=>{if(so&&i!==so-1)s.style.display='none';else s.classList.add('active')})}
+else{fit();go((parseInt(location.hash.slice(1))||1)-1)}
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(boot);else boot();
+</script>
+</body></html>

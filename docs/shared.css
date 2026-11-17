@@ -1,0 +1,33 @@
+:root{--bg:#060b28;--fg:#fff;--muted:#a0aec0;--line:rgba(255,255,255,.1);--blue:#0075ff;--blue2:#3d8bff;--cyan:#21d4fd;--violet:#a78bfa;--green:#01b574;--red:#f0605d;--amber:#ffb547;--ease:cubic-bezier(.2,.8,.2,1)}
+*{box-sizing:border-box}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;color:var(--fg);font:13px/1.55 'Plus Jakarta Sans','Segoe UI',system-ui,sans-serif;background:#03061a}
+h1,h2,h3,p{margin:0}
+.glass{border-radius:16px;border:1px solid var(--line);background:linear-gradient(127deg,rgba(15,24,70,.85) 19%,rgba(8,12,38,.6) 76%)}
+.muted{color:var(--muted)}.b{font-weight:700}.ok{color:var(--green)}.warn{color:var(--amber)}.badc{color:var(--red)}
+.tag{display:inline-block;font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:99px;background:rgba(0,117,255,.18);border:1px solid rgba(0,117,255,.4);color:#cfe1ff}
+code,.mono{font-family:Consolas,'Cascadia Mono',monospace;font-size:.92em;color:#bcd3ff}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th{color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px;font-weight:600}
+.num{text-align:right}th.num{text-align:right}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px}
+.chart{position:relative}.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.axt{fill:#a0aec0;font-size:10.5px}.grd{stroke:rgba(255,255,255,.09);stroke-dasharray:3 4}
+.vl{fill:#fff;font-size:9.5px;font-weight:700;text-anchor:middle}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-bottom:4px}
+.legend span{display:inline-flex;align-items:center;gap:6px}.legend i{width:9px;height:9px;border-radius:3px;display:inline-block}
+
+/* sudoku board (same component as the dashboard, static) */
+.i-board{position:relative;aspect-ratio:1}
+.i-board svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 14px rgba(0,117,255,.5))}
+.i-board line{stroke:rgba(150,190,255,.6);stroke-linecap:round}
+.i-cells{position:absolute;inset:0;display:grid;grid-template:repeat(9,1fr)/repeat(9,1fr)}
+.ic{position:relative}
+.dg{position:absolute;inset:13%;background:#fff;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center}
+.dg.t{display:grid;place-items:center;background:none;color:#fff;font:700 13px 'Plus Jakarta Sans','Segoe UI',sans-serif}
+.dg.wrong{opacity:0}
+.dg.right{background:#01b574}.dg.t.right{background:none;color:#01b574}
+.was{position:absolute;top:4%;right:7%;font-size:8px;font-weight:800;font-style:normal;color:#f0605d;text-decoration:line-through}
+.dg.mis{background:#f0605d}.dg.t.mis{background:none;color:#f0605d}
+.dg.wrong.show{opacity:1}
