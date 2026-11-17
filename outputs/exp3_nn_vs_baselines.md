@@ -1,0 +1,14 @@
+| misreads | method | exact recovery rate |
+|---|---|---|
+| 0 | NN-guided (UCS) | 1.000 ± 0.000 |
+| 0 | no correction | 1.000 ± 0.000 |
+| 0 | random correction | 1.000 ± 0.000 |
+| 1 | NN-guided (UCS) | 0.960 ± 0.055 |
+| 1 | no correction | 0.000 ± 0.000 |
+| 1 | random correction | 0.230 ± 0.076 |
+| 2 | NN-guided (UCS) | 0.770 ± 0.157 |
+| 2 | no correction | 0.000 ± 0.000 |
+| 2 | random correction | 0.000 ± 0.000 |
+| 3 | NN-guided (UCS) | 0.550 ± 0.071 |
+| 3 | no correction | 0.000 ± 0.000 |
+| 3 | random correction | 0.000 ± 0.000 |
